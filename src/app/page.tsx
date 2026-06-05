@@ -1,12 +1,11 @@
 "use client";
 import React from "react";
-import TopNav from "@/components/navigation/TopNav";
-import Toolbar from "@/components/toolbar/Toolbar";
 import CanvasContainer from "@/components/canvas/CanvasContainer";
-import StatusBar from "@/components/canvas/StatusBar";
-import PropertiesPanel from "@/components/properties/PropertiesPanel";
-import Toast from "@/components/ui/Toast";
-import { useToast } from "@/components/ui/Toast";
+import BottomBar from "@/components/canvas/BottomBar";
+import FloatingToolbar from "@/components/toolbar/FloatingToolbar";
+import HamburgerMenu from "@/components/navigation/HamburgerMenu";
+import FloatingProperties from "@/components/properties/FloatingProperties";
+import { Toast, useToast } from "@/components/ui/Toast";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 export default function BoardPage() {
@@ -14,23 +13,28 @@ export default function BoardPage() {
   useKeyboardShortcuts(showToast);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        overflow: "hidden",
-      }}
-    >
-      <TopNav />
+    <div style={{
+      position: "relative",
+      width: "100vw", height: "100vh",
+      overflow: "hidden",
+      background: "var(--bg-canvas)",
+    }}>
+      {/* Full-screen canvas */}
+      <CanvasContainer />
 
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <Toolbar />
-        <CanvasContainer />
-        <PropertiesPanel />
-      </div>
+      {/* Floating toolbar — centered top */}
+      <FloatingToolbar />
 
-      <StatusBar />
+      {/* Hamburger menu — top left */}
+      <HamburgerMenu />
+
+      {/* Contextual properties panel — left side */}
+      <FloatingProperties />
+
+      {/* Bottom controls */}
+      <BottomBar />
+
+      {/* Toast */}
       <Toast messages={messages} onDismiss={() => {}} />
     </div>
   );

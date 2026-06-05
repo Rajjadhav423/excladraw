@@ -1,45 +1,31 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useCallback, useRef, useState } from "react";
 
 export interface ToastMessage {
   id: number;
   text: string;
 }
 
-interface Props {
-  messages: ToastMessage[];
-  onDismiss: (id: number) => void;
-}
-
-export default function Toast({ messages, onDismiss }: Props) {
+export function Toast({ messages }: { messages: ToastMessage[]; onDismiss: (id: number) => void }) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 40,
-        left: "50%",
-        transform: "translateX(-50%)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        zIndex: 9999,
-        pointerEvents: "none",
-      }}
-    >
+    <div style={{
+      position: "fixed", bottom: 36, left: "50%",
+      transform: "translateX(-50%)",
+      display: "flex", flexDirection: "column", alignItems: "center",
+      gap: 6, zIndex: 9999, pointerEvents: "none",
+    }}>
       {messages.map((m) => (
-        <div
-          key={m.id}
-          style={{
-            background: "var(--text-primary)",
-            color: "white",
-            padding: "8px 16px",
-            borderRadius: 6,
-            fontSize: 13,
-            fontWeight: 500,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-            animation: "fadeIn 0.15s ease",
-          }}
-        >
+        <div key={m.id} style={{
+          background: "var(--text-primary)",
+          color: "var(--bg-panel)",
+          padding: "6px 14px",
+          borderRadius: 4,
+          fontSize: 12, fontWeight: 600,
+          letterSpacing: "0.01em",
+          boxShadow: "var(--shadow-md)",
+          animation: "fadeSlideUp 0.18s ease",
+          whiteSpace: "nowrap",
+        }}>
           {m.text}
         </div>
       ))}
@@ -49,7 +35,7 @@ export default function Toast({ messages, onDismiss }: Props) {
 
 export function useToast() {
   const [messages, setMessages] = useState<ToastMessage[]>([]);
-  let counter = React.useRef(0);
+  const counter = useRef(0);
 
   const showToast = useCallback((text: string) => {
     const id = ++counter.current;

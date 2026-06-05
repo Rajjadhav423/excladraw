@@ -135,6 +135,10 @@ svg *, canvas { transition: none; }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 
 /* ── Scrollbar ───────────────────────────────────────────────────────── */
 ::-webkit-scrollbar            { width: 5px; height: 5px; }
