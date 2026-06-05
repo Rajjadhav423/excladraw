@@ -5,6 +5,7 @@ import { useViewportStore } from "@/stores/viewportStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useSelectionStore } from "@/stores/selectionStore";
 import { useHistoryStore } from "@/stores/historyStore";
+import { Button } from "@/components/ui";
 
 const PILL: React.CSSProperties = {
   display: "flex",
@@ -16,9 +17,12 @@ const PILL: React.CSSProperties = {
   boxShadow: "var(--ads-shadow-card)",
 };
 
-function BBtn({ onClick, title, children, disabled, divider }: {
-  onClick?: () => void; title: string; children: React.ReactNode;
-  disabled?: boolean; divider?: boolean;
+function PillBtn({ onClick, title, children, disabled, divider }: {
+  onClick?: () => void;
+  title: string;
+  children: React.ReactNode;
+  disabled?: boolean;
+  divider?: boolean;
 }) {
   return (
     <button
@@ -38,10 +42,13 @@ function BBtn({ onClick, title, children, disabled, divider }: {
         color: disabled ? "var(--ads-text-disabled)" : "var(--ads-icon-default)",
         opacity: disabled ? 0.38 : 1,
         transition: "background var(--ads-transition-fast)",
+        flexShrink: 0,
       }}
       onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = "var(--ads-surface-hovered)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-    >{children}</button>
+    >
+      {children}
+    </button>
   );
 }
 
@@ -55,12 +62,12 @@ export default memo(function BottomBar() {
   return (
     <div style={{ position: "relative", height: 40, width: "100%" }}>
 
-      {/* Left: zoom + undo */}
+      {/* Left: zoom + undo/redo */}
       <div style={{ position: "absolute", left: 0, top: 0, display: "flex", gap: "var(--ads-sp-075)" }}>
         <div style={PILL}>
-          <BBtn onClick={() => zoomTo(viewport.zoom / 1.2)} title="Zoom out">
+          <PillBtn onClick={() => zoomTo(viewport.zoom / 1.2)} title="Zoom out">
             <ZoomOut size={14} strokeWidth={1.8} />
-          </BBtn>
+          </PillBtn>
           <button
             onClick={resetViewport}
             title="Reset zoom"
@@ -72,49 +79,51 @@ export default memo(function BottomBar() {
               borderRight: "1px solid var(--ads-border)",
               background: "transparent",
               cursor: "pointer",
-              fontSize: "var(--ads-font-size-xs)",
-              fontWeight: "var(--ads-font-weight-semibold)" as React.CSSProperties["fontWeight"],
+              fontSize: "var(--ads-font-size-xxs)",
+              fontWeight: 700,
               color: "var(--ads-text-secondary)",
               fontVariantNumeric: "tabular-nums",
-              minWidth: 48,
+              minWidth: 44,
               textAlign: "center",
               transition: "background var(--ads-transition-fast)",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--ads-surface-hovered)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >{zoomPercent}%</button>
-          <BBtn onClick={() => zoomTo(viewport.zoom * 1.2)} title="Zoom in">
+          >
+            {zoomPercent}%
+          </button>
+          <PillBtn onClick={() => zoomTo(viewport.zoom * 1.2)} title="Zoom in">
             <ZoomIn size={14} strokeWidth={1.8} />
-          </BBtn>
+          </PillBtn>
         </div>
 
         <div style={PILL}>
-          <BBtn
+          <PillBtn
             onClick={() => { const p = undo(shapes); if (p) { setShapes(p); clearSelection(); } }}
             title="Undo (Ctrl+Z)"
             disabled={!canUndo}
           >
             <Undo2 size={14} strokeWidth={1.8} />
-          </BBtn>
-          <BBtn
+          </PillBtn>
+          <PillBtn
             onClick={() => { const n = redo(shapes); if (n) { setShapes(n); clearSelection(); } }}
             title="Redo (Ctrl+Shift+Z)"
             disabled={!canRedo}
             divider
           >
             <Redo2 size={14} strokeWidth={1.8} />
-          </BBtn>
+          </PillBtn>
         </div>
       </div>
 
-      {/* Center: cursor coords */}
+      {/* Center: cursor */}
       <div style={{
         position: "absolute",
         left: "50%",
         top: "50%",
-        transform: "translate(-50%,-50%)",
+        transform: "translate(-50%, -50%)",
         fontSize: "var(--ads-font-size-xxs)",
-        fontWeight: "var(--ads-font-weight-medium)" as React.CSSProperties["fontWeight"],
+        fontWeight: 500,
         color: "var(--ads-text-disabled)",
         fontVariantNumeric: "tabular-nums",
         letterSpacing: "0.02em",
@@ -123,16 +132,12 @@ export default memo(function BottomBar() {
         {cursorPosition.x}, {cursorPosition.y}
       </div>
 
-      {/* Right: share + icon */}
+      {/* Right: share + badge */}
       <div style={{ position: "absolute", right: 0, top: 0, display: "flex", gap: "var(--ads-sp-075)", alignItems: "center" }}>
-        <button
-          className="ads-btn ads-btn-primary"
-          style={{ gap: "var(--ads-sp-075)", boxShadow: "var(--ads-shadow-card)" }}
-        >
+        <Button variant="primary" style={{ gap: "var(--ads-sp-075)", height: 32 }}>
           <Share2 size={13} strokeWidth={1.8} />
           Share
-        </button>
-
+        </Button>
         <div style={{
           width: 32,
           height: 32,

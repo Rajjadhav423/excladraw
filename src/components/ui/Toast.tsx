@@ -6,23 +6,30 @@ export interface ToastMessage {
   text: string;
 }
 
-export function Toast({ messages }: { messages: ToastMessage[]; onDismiss: (id: number) => void }) {
+export function Toast({ messages }: { messages: ToastMessage[]; onDismiss?: (id: number) => void }) {
   return (
     <div style={{
-      position: "fixed", bottom: 36, left: "50%",
+      position: "fixed",
+      bottom: 48,
+      left: "50%",
       transform: "translateX(-50%)",
-      display: "flex", flexDirection: "column", alignItems: "center",
-      gap: 6, zIndex: 9999, pointerEvents: "none",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "var(--ads-sp-075)",
+      zIndex: 9999,
+      pointerEvents: "none",
     }}>
       {messages.map((m) => (
         <div key={m.id} style={{
-          background: "var(--text-primary)",
-          color: "var(--bg-panel)",
-          padding: "6px 14px",
-          borderRadius: 4,
-          fontSize: 12, fontWeight: 600,
+          background: "var(--ads-text-primary)",
+          color: "var(--ads-text-inverse)",
+          padding: "var(--ads-sp-050) var(--ads-sp-150)",
+          borderRadius: "var(--ads-radius-sm)",
+          fontSize: "var(--ads-font-size-xs)",
+          fontWeight: 600,
           letterSpacing: "0.01em",
-          boxShadow: "var(--shadow-md)",
+          boxShadow: "var(--ads-shadow-overlay)",
           animation: "fadeSlideUp 0.18s ease",
           whiteSpace: "nowrap",
         }}>

@@ -5,6 +5,7 @@ import { useSelectionStore } from "@/stores/selectionStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { Shape, TextShape } from "@/types";
+import { PanelSection, ColorSwatch, SliderRow, Separator, Label, Button, NumberInput } from "@/components/ui";
 
 const STROKE_COLORS = [
   "#000000", "#343a40", "#e03131", "#2f9e44",
@@ -14,71 +15,6 @@ const FILL_COLORS = [
   "none",    "#ffffff", "#ffc9c9", "#b2f2bb",
   "#a5d8ff", "#ffec99", "#eebefa", "#ffa8a8",
 ];
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: "var(--ads-sp-025)" }}>
-      <div className="ads-label" style={{ padding: "var(--ads-sp-100) var(--ads-sp-150) var(--ads-sp-050)" }}>
-        {title}
-      </div>
-      <div style={{ padding: "0 var(--ads-sp-100) var(--ads-sp-100)" }}>{children}</div>
-    </div>
-  );
-}
-
-function ColorPicker({ colors, value, onChange }: {
-  colors: string[]; value: string; onChange: (c: string) => void;
-}) {
-  return (
-    <div style={{ display: "flex", gap: "var(--ads-sp-050)", flexWrap: "wrap" }}>
-      {colors.map((c) => (
-        <button
-          key={c}
-          onClick={() => onChange(c)}
-          title={c}
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: "var(--ads-radius-sm)",
-            cursor: "pointer",
-            flexShrink: 0,
-            border: value === c ? "2px solid var(--ads-brand)" : "1.5px solid var(--ads-border)",
-            background: c === "none"
-              ? `repeating-linear-gradient(45deg, var(--ads-border) 0, var(--ads-border) 1px, transparent 0, transparent 50%)`
-              : c,
-            backgroundSize: c === "none" ? "5px 5px" : undefined,
-            outline: value === c ? "2px solid var(--ads-brand-subtle)" : "none",
-            outlineOffset: "1px",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function SliderRow({ label, min, max, step, value, onChange, format }: {
-  label: string; min: number; max: number; step: number;
-  value: number; onChange: (v: number) => void; format?: (v: number) => string;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "var(--ads-sp-100)", marginBottom: "var(--ads-sp-050)" }}>
-      <span style={{ fontSize: "var(--ads-font-size-xxs)", color: "var(--ads-text-subtle)", width: 48, flexShrink: 0 }}>{label}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="ads-range"
-        style={{ flex: 1 }}
-      />
-      <span style={{ fontSize: "var(--ads-font-size-xxs)", fontWeight: "var(--ads-font-weight-bold)" as React.CSSProperties["fontWeight"], color: "var(--ads-text-secondary)", minWidth: 28, textAlign: "right" }}>
-        {format ? format(value) : value}
-      </span>
-    </div>
-  );
-}
 
 const FloatingProperties = memo(function FloatingProperties() {
   const { selectedIds } = useSelectionStore();
@@ -104,41 +40,38 @@ const FloatingProperties = memo(function FloatingProperties() {
       border: "1px solid var(--ads-border)",
       borderRadius: "var(--ads-radius-lg)",
       boxShadow: "var(--ads-shadow-overlay)",
-      zIndex: 50,
       overflowY: "auto",
       maxHeight: "calc(100vh - 120px)",
       animation: "fadeIn 0.15s ease",
     }}>
-      {/* Shape type label */}
+      {/* Shape type */}
       <div style={{
-        padding: "var(--ads-sp-100) var(--ads-sp-150) var(--ads-sp-075)",
+        padding: "var(--ads-sp-100) var(--ads-sp-150)",
         borderBottom: "1px solid var(--ads-border)",
         fontSize: "var(--ads-font-size-xs)",
-        fontWeight: "var(--ads-font-weight-semibold)" as React.CSSProperties["fontWeight"],
+        fontWeight: 600,
         color: "var(--ads-text-secondary)",
         textTransform: "capitalize",
         letterSpacing: "0.01em",
+        lineHeight: "var(--ads-line-height-xs)",
       }}>
         {shape.type}
       </div>
 
-      {/* Stroke color */}
-      <Section title="Stroke">
-        <ColorPicker colors={STROKE_COLORS} value={shape.stroke}
+      <PanelSection title="Stroke">
+        <ColorSwatch colors={STROKE_COLORS} value={shape.stroke}
           onChange={(c) => update("stroke", c)} />
-      </Section>
+      </PanelSection>
 
-      {/* Fill */}
       {!["arrow", "line", "freedraw"].includes(shape.type) && (
-        <Section title="Background">
-          <ColorPicker colors={FILL_COLORS} value={shape.fill}
+        <PanelSection title="Background">
+          <ColorSwatch colors={FILL_COLORS} value={shape.fill}
             onChange={(c) => update("fill", c)} />
-        </Section>
+        </PanelSection>
       )}
 
-      <div style={{ height: 1, background: "var(--ads-border)" }} />
+      <Separator />
 
-      {/* Sliders */}
       <div style={{ padding: "var(--ads-sp-100) var(--ads-sp-100)" }}>
         <SliderRow label="Stroke W." min={0.5} max={12} step={0.5}
           value={shape.strokeWidth}
@@ -151,21 +84,17 @@ const FloatingProperties = memo(function FloatingProperties() {
         />
       </div>
 
-      {/* Text options */}
       {shape.type === "text" && (
         <>
-          <div style={{ height: 1, background: "var(--ads-border)" }} />
-          <Section title="Text">
+          <Separator />
+          <PanelSection title="Text">
             <div style={{ display: "flex", alignItems: "center", gap: "var(--ads-sp-075)", marginBottom: "var(--ads-sp-075)" }}>
-              <span style={{ fontSize: "var(--ads-font-size-xxs)", color: "var(--ads-text-subtle)", width: 48 }}>Size</span>
-              <input
-                type="number"
+              <span style={{ fontSize: "var(--ads-font-size-xxs)", color: "var(--ads-text-subtle)", width: 48, flexShrink: 0 }}>Size</span>
+              <NumberInput
                 min={8}
                 max={96}
                 value={(shape as TextShape).fontSize}
-                onChange={(e) => update("fontSize" as keyof Shape, parseInt(e.target.value))}
-                className="ads-input"
-                style={{ height: 28, fontSize: "var(--ads-font-size-xs)" }}
+                onChange={(v) => update("fontSize" as keyof Shape, v)}
               />
             </div>
             <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
@@ -187,7 +116,7 @@ const FloatingProperties = memo(function FloatingProperties() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      transition: "background var(--ads-transition-fast), border-color var(--ads-transition-fast)",
+                      transition: "background var(--ads-transition-fast), border-color var(--ads-transition-fast), color var(--ads-transition-fast)",
                     }}
                   >
                     <Icon size={13} strokeWidth={1.8} />
@@ -195,15 +124,14 @@ const FloatingProperties = memo(function FloatingProperties() {
                 );
               })}
             </div>
-          </Section>
+          </PanelSection>
         </>
       )}
 
-      <div style={{ height: 1, background: "var(--ads-border)" }} />
+      <Separator />
 
-      {/* Layer controls */}
       <div style={{ padding: "var(--ads-sp-100) var(--ads-sp-100)" }}>
-        <div className="ads-label" style={{ marginBottom: "var(--ads-sp-075)" }}>Layers</div>
+        <Label style={{ marginBottom: "var(--ads-sp-075)" }}>Layers</Label>
         <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
           {[
             { icon: <SendToBack size={13} strokeWidth={1.8} />,   label: "Back",  fn: () => sendToBack(shape.id) },
@@ -211,23 +139,15 @@ const FloatingProperties = memo(function FloatingProperties() {
             { icon: <ChevronUp size={13} strokeWidth={1.8} />,    label: "+",     fn: () => bringForward(shape.id) },
             { icon: <BringToFront size={13} strokeWidth={1.8} />, label: "Front", fn: () => bringToFront(shape.id) },
           ].map(({ icon, label, fn }) => (
-            <button
+            <Button
               key={label}
+              variant="default"
               onClick={fn}
               title={label}
-              className="ads-btn ads-btn-default"
-              style={{
-                flex: 1,
-                height: 28,
-                padding: 0,
-                borderRadius: "var(--ads-radius-sm)",
-                fontSize: "var(--ads-font-size-xxs)",
-                fontWeight: "var(--ads-font-weight-semibold)" as React.CSSProperties["fontWeight"],
-                justifyContent: "center",
-              }}
+              style={{ flex: 1, height: 28, padding: 0, justifyContent: "center", borderRadius: "var(--ads-radius-sm)" }}
             >
               {icon}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

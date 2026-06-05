@@ -226,6 +226,39 @@ Always use spacing tokens, never arbitrary pixel values.
 
 ---
 
+## UI Component Library (src/components/ui/)
+
+All reusable UI primitives live in `src/components/ui/` and are exported from `src/components/ui/index.ts`.
+**Never inline the same pattern twice** — if you write a button, color swatch, label, or separator more than once, extract it into a `ui/` component first.
+
+### Rule
+> Before building any new UI element, check `src/components/ui/` first.
+> If the component doesn't exist, create it there, export it from `index.ts`, then use it.
+> Import exclusively via the barrel: `import { Button, Label, … } from "@/components/ui"`.
+
+### Available components
+
+| Component | File | Usage |
+|---|---|---|
+| `Button` | `Button.tsx` | `<Button variant="primary|default|subtle|danger|link" size="sm|md|lg" icon />` |
+| `Label` | `Label.tsx` | `<Label variant="section|default" />` — ADS uppercase panel header or form label |
+| `Separator` | `Separator.tsx` | `<Separator />` — 1px horizontal rule using `--ads-border` |
+| `ColorSwatch` | `ColorSwatch.tsx` | `<ColorSwatch colors value onChange />` — row of clickable color buttons |
+| `SliderRow` | `SliderRow.tsx` | `<SliderRow label min max step value onChange format? />` |
+| `MenuItem` | `MenuItem.tsx` | `<MenuItem icon label shortcut? accent? danger? onClick? />` — sidebar/menu row |
+| `PanelSection` | `PanelSection.tsx` | `<PanelSection title>` — section with ADS label + padded content area |
+| `NumberInput` | `NumberInput.tsx` | `<NumberInput min max value onChange />` |
+| `Toast` / `useToast` | `Toast.tsx` | Toast notification overlay + hook |
+
+### Styling rules for new ui/ components
+- Use only `var(--ads-*)` tokens — never hardcode colors or sizes
+- Use `className="ads-btn ads-btn-primary"` etc. from `atlassian.css` where applicable
+- Accept a `style?: React.CSSProperties` prop for layout overrides (width, flex, margin)
+- Never accept a `className` prop that could override ADS tokens inconsistently
+- Keep components pure: no store access, no side effects — only props in, JSX out
+
+---
+
 ## Do / Don't
 
 | ✅ Do                                      | ❌ Don't                                    |
@@ -238,12 +271,15 @@ Always use spacing tokens, never arbitrary pixel values.
 | Keep panels flat (no gradient, no blur)   | Add glassmorphism, blur, or heavy gradients |
 | Use `transition` only on bg/border/color  | Animate layout, width, or transform heavily |
 | Check `data-theme` attribute for theme    | Use `window.matchMedia` for dark detection  |
+| Build new UI as a `ui/` component first   | Copy-paste the same button/label inline     |
+| Import from `@/components/ui` barrel      | Import individual ui files directly         |
 
 ---
 
 ## File References
 
-- Design tokens + component CSS: `src/styles/atlassian.css` — import this in any new page/component
+- Design tokens + component CSS: `src/styles/atlassian.css` — imported globally via `globals.css`
+- UI component library: `src/components/ui/index.ts` — barrel export for all primitives
 - Theme switching: `src/stores/themeStore.ts` + `src/hooks/useTheme.ts`
 - Theme attribute: `document.documentElement.setAttribute("data-theme", theme)`
 - Canvas store: `src/stores/canvasStore.ts`

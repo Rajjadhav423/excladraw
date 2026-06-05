@@ -25,14 +25,14 @@ const FloatingToolbar = memo(function FloatingToolbar() {
       display: "flex",
       alignItems: "center",
       gap: "var(--ads-sp-025)",
-      padding: "var(--ads-sp-050) var(--ads-sp-100)",
+      padding: "var(--ads-sp-050) var(--ads-sp-075)",
       background: "var(--ads-surface-default)",
       border: "1px solid var(--ads-border)",
       borderRadius: "var(--ads-radius-lg)",
       boxShadow: "var(--ads-shadow-raised)",
     }}>
       {TOOLS.map((t, i) => {
-        const isActive = tool === t.id;
+        const active = tool === t.id;
         return (
           <button
             key={t.id}
@@ -46,20 +46,20 @@ const FloatingToolbar = memo(function FloatingToolbar() {
               alignItems: "center",
               justifyContent: "center",
               borderRadius: "var(--ads-radius-sm)",
-              border: isActive ? "1px solid var(--ads-brand)" : "1px solid transparent",
+              border: active ? "1px solid var(--ads-brand)" : "1px solid transparent",
               cursor: "pointer",
-              background: isActive ? "var(--ads-surface-selected)" : "transparent",
-              color: isActive ? "var(--ads-brand)" : "var(--ads-icon-subtle)",
-              transition: "background var(--ads-transition-fast), color var(--ads-transition-fast), border-color var(--ads-transition-fast)",
+              background: active ? "var(--ads-surface-selected)" : "transparent",
+              color: active ? "var(--ads-brand)" : "var(--ads-icon-subtle)",
+              transition: "background var(--ads-transition-fast), color var(--ads-transition-fast)",
             }}
             onMouseEnter={(e) => {
-              if (!isActive) {
+              if (!active) {
                 e.currentTarget.style.background = "var(--ads-surface-hovered)";
                 e.currentTarget.style.color = "var(--ads-text-primary)";
               }
             }}
             onMouseLeave={(e) => {
-              if (!isActive) {
+              if (!active) {
                 e.currentTarget.style.background = "transparent";
                 e.currentTarget.style.color = "var(--ads-icon-subtle)";
               }
@@ -71,9 +71,9 @@ const FloatingToolbar = memo(function FloatingToolbar() {
               bottom: 2,
               right: 3,
               fontSize: 8,
-              fontWeight: "var(--ads-font-weight-bold)" as React.CSSProperties["fontWeight"],
-              color: isActive ? "var(--ads-brand)" : "var(--ads-text-disabled)",
+              fontWeight: 700,
               lineHeight: 1,
+              color: active ? "var(--ads-brand)" : "var(--ads-text-disabled)",
             }}>
               {i + 1}
             </span>
