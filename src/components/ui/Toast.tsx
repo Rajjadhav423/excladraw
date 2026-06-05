@@ -30,7 +30,7 @@ export default function Toast({ messages, onDismiss }: Props) {
         <div
           key={m.id}
           style={{
-            background: "#172B4D",
+            background: "var(--text-primary)",
             color: "white",
             padding: "8px 16px",
             borderRadius: 6,

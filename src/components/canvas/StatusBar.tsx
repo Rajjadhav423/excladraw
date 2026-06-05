@@ -7,7 +7,7 @@ import { useSelectionStore } from "@/stores/selectionStore";
 
 const StatusBar = memo(function StatusBar() {
   const { viewport, zoomTo, resetViewport } = useViewportStore();
-  const { cursorPosition, shapes, snapToGrid, setSnapToGrid, gridSize } = useCanvasStore();
+  const { cursorPosition, shapes, snapToGrid, setSnapToGrid } = useCanvasStore();
   const { selectedIds } = useSelectionStore();
 
   const zoomPercent = Math.round(viewport.zoom * 100);
@@ -19,23 +19,21 @@ const StatusBar = memo(function StatusBar() {
         display: "flex",
         alignItems: "center",
         padding: "0 12px",
-        background: "#FFFFFF",
-        borderTop: "1px solid #DCDFE4",
+        background: "var(--bg-panel)",
+        borderTop: "1px solid var(--border)",
         fontSize: 12,
-        color: "#626F86",
+        color: "var(--text-muted)",
         gap: 16,
         flexShrink: 0,
         userSelect: "none",
       }}
     >
-      {/* Cursor position */}
       <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 100 }}>
         x: {cursorPosition.x}, y: {cursorPosition.y}
       </span>
 
-      <div style={{ width: 1, height: 14, background: "#DCDFE4" }} />
+      <div style={{ width: 1, height: 14, background: "var(--border)" }} />
 
-      {/* Shape count */}
       <span>
         {shapes.length} shape{shapes.length !== 1 ? "s" : ""}
         {selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ""}
@@ -43,57 +41,33 @@ const StatusBar = memo(function StatusBar() {
 
       <div style={{ flex: 1 }} />
 
-      {/* Snap to grid toggle */}
-      <label
-        style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}
-      >
+      <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}>
         <input
           type="checkbox"
           checked={snapToGrid}
           onChange={(e) => setSnapToGrid(e.target.checked)}
-          style={{ accentColor: "#0C66E4", cursor: "pointer" }}
+          style={{ accentColor: "var(--accent)", cursor: "pointer" }}
         />
         <span>Snap to grid</span>
       </label>
 
-      <div style={{ width: 1, height: 14, background: "#DCDFE4" }} />
+      <div style={{ width: 1, height: 14, background: "var(--border)" }} />
 
-      {/* Zoom controls */}
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <button
-          onClick={() => zoomTo(viewport.zoom / 1.25)}
-          style={zoomBtn}
-          title="Zoom out"
-        >
+        <button onClick={() => zoomTo(viewport.zoom / 1.25)} style={zoomBtn} title="Zoom out">
           <ZoomOut size={13} />
         </button>
-
         <button
           onClick={resetViewport}
-          style={{
-            ...zoomBtn,
-            minWidth: 48,
-            fontVariantNumeric: "tabular-nums",
-            fontSize: 12,
-          }}
+          style={{ ...zoomBtn, minWidth: 48, fontVariantNumeric: "tabular-nums", fontSize: 12 }}
           title="Reset zoom"
         >
           {zoomPercent}%
         </button>
-
-        <button
-          onClick={() => zoomTo(viewport.zoom * 1.25)}
-          style={zoomBtn}
-          title="Zoom in"
-        >
+        <button onClick={() => zoomTo(viewport.zoom * 1.25)} style={zoomBtn} title="Zoom in">
           <ZoomIn size={13} />
         </button>
-
-        <button
-          onClick={resetViewport}
-          style={zoomBtn}
-          title="Fit to screen"
-        >
+        <button onClick={resetViewport} style={zoomBtn} title="Fit to screen">
           <Maximize size={13} />
         </button>
       </div>
@@ -108,10 +82,10 @@ const zoomBtn: React.CSSProperties = {
   padding: "2px 6px",
   height: 22,
   borderRadius: 4,
-  border: "1px solid #DCDFE4",
-  background: "white",
+  border: "1px solid var(--border)",
+  background: "var(--bg-panel)",
   cursor: "pointer",
-  color: "#44546F",
+  color: "var(--text-secondary)",
   fontSize: 12,
 };
 

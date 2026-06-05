@@ -5,6 +5,7 @@ import { Shape } from "@/types";
 interface Props {
   shape: Shape;
   isSelected: boolean;
+  isEditing?: boolean;
   onClick: (e: React.MouseEvent) => void;
   onMouseDown: (e: React.MouseEvent) => void;
 }
@@ -22,6 +23,7 @@ function getArrowHead(x1: number, y1: number, x2: number, y2: number, size = 10)
 const ShapeRenderer = memo(function ShapeRenderer({
   shape,
   isSelected,
+  isEditing = false,
   onClick,
   onMouseDown,
 }: Props) {
@@ -115,8 +117,8 @@ const ShapeRenderer = memo(function ShapeRenderer({
 
   if (shape.type === "text") {
     return (
-      <g {...commonProps} style={{ opacity: shape.opacity, cursor: "move" }}>
-        {isSelected && (
+      <g {...commonProps} style={{ opacity: isEditing ? 0 : shape.opacity, cursor: "move" }}>
+        {isSelected && !isEditing && (
           <rect
             x={shape.x - 2}
             y={shape.y - 2}
@@ -129,7 +131,16 @@ const ShapeRenderer = memo(function ShapeRenderer({
             rx={2}
           />
         )}
-        <foreignObject x={shape.x} y={shape.y} width={shape.width} height={shape.height}>
+        {/* Invisible hit area for selection */}
+        <rect
+          x={shape.x}
+          y={shape.y}
+          width={Math.max(shape.width, 10)}
+          height={Math.max(shape.height, 10)}
+          fill="transparent"
+          stroke="none"
+        />
+        <foreignObject x={shape.x} y={shape.y} width={Math.max(shape.width, 10)} height={Math.max(shape.height + 8, 32)}>
           <div
             style={{
               fontSize: shape.fontSize,
@@ -140,6 +151,7 @@ const ShapeRenderer = memo(function ShapeRenderer({
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
               lineHeight: 1.4,
+              padding: "2px 4px",
             }}
           >
             {shape.text}

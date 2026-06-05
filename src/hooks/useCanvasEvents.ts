@@ -4,7 +4,13 @@ import { useSelectionStore } from "@/stores/selectionStore";
 import { useToolStore } from "@/stores/toolStore";
 import { useViewportStore } from "@/stores/viewportStore";
 import { useHistoryStore } from "@/stores/historyStore";
-import { screenToCanvas, snapToGrid, hitTestShape, selectionBoxHitsShape, normalizeRect } from "@/lib/geometry";
+import {
+  screenToCanvas,
+  snapToGrid,
+  hitTestShape,
+  selectionBoxHitsShape,
+  normalizeRect,
+} from "@/lib/geometry";
 import { createShape } from "@/lib/shapeFactory";
 import { Shape, Point } from "@/types";
 
@@ -17,14 +23,33 @@ interface DragState {
   resizeOrigin?: { x: number; y: number; width: number; height: number };
   shapesOrigin?: Map<string, { x: number; y: number }>;
   selectionBox?: { x: number; y: number; width: number; height: number };
+  moved?: boolean;
 }
 
-export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
-  const drag = useRef<DragState>({ type: "none", startScreen: { x: 0, y: 0 }, startCanvas: { x: 0, y: 0 } });
+export function useCanvasEvents(
+  svgRef: React.RefObject<SVGSVGElement | null>,
+  onTextEdit?: (id: string) => void
+) {
+  const drag = useRef<DragState>({
+    type: "none",
+    startScreen: { x: 0, y: 0 },
+    startCanvas: { x: 0, y: 0 },
+  });
   const spaceHeld = useRef(false);
 
-  const { shapes, addShape, updateShape, moveShapes, setIsDrawing, setDrawingShape, drawingShape, snapToGrid: snap, gridSize, setCursorPosition } = useCanvasStore();
-  const { selectedIds, selectOne, selectMany, clearSelection, addToSelection } = useSelectionStore();
+  const {
+    shapes,
+    addShape,
+    updateShape,
+    setIsDrawing,
+    setDrawingShape,
+    drawingShape,
+    snapToGrid: snap,
+    gridSize,
+    setCursorPosition,
+  } = useCanvasStore();
+  const { selectedIds, selectOne, selectMany, clearSelection, addToSelection } =
+    useSelectionStore();
   const { tool, setTool } = useToolStore();
   const { viewport, panBy, zoomTo } = useViewportStore();
   const { push } = useHistoryStore();
@@ -34,7 +59,7 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
       const rect = svgRef.current?.getBoundingClientRect();
       if (!rect) return { x: 0, y: 0 };
       const sp = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      let cp = screenToCanvas(sp.x, sp.y, viewport);
+      const cp = screenToCanvas(sp.x, sp.y, viewport);
       if (snap) {
         cp.x = snapToGrid(cp.x, gridSize);
         cp.y = snapToGrid(cp.y, gridSize);
@@ -50,7 +75,6 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button === 1 || spaceHeld.current) {
-        // pan
         drag.current = {
           type: "pan",
           startScreen: { x: e.clientX, y: e.clientY },
@@ -84,31 +108,44 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
         return;
       }
 
-      // select tool - check if clicking on a shape
+      // select tool
       const cp = getCanvasPoint(e);
       const sorted = [...shapes].sort((a, b) => b.zIndex - a.zIndex);
       const hit = sorted.find((s) => hitTestShape(s, cp.x, cp.y));
 
       if (hit) {
+        // Update selection first
         if (e.shiftKey) {
           addToSelection(hit.id);
         } else if (!selectedIds.has(hit.id)) {
           selectOne(hit.id);
         }
+
+        // Build origins for every shape that will move
+        // If shift-clicking or clicking an already-selected shape, move whole selection
+        const willMoveIds =
+          e.shiftKey || selectedIds.has(hit.id)
+            ? [...selectedIds, hit.id].filter(
+                (id, i, arr) => arr.indexOf(id) === i
+              )
+            : [hit.id];
+
         const origin = new Map<string, { x: number; y: number }>();
-        const moveIds = selectedIds.has(hit.id)
-          ? [...selectedIds]
-          : [hit.id];
-        moveIds.forEach((id) => {
+        willMoveIds.forEach((id) => {
           const s = shapes.find((sh) => sh.id === id);
           if (s) origin.set(id, { x: s.x, y: s.y });
         });
+
+        // Push history BEFORE moving so undo restores the pre-move state
+        push(shapes);
+
         drag.current = {
           type: "move",
           startScreen: { x: e.clientX, y: e.clientY },
           startCanvas: cp,
           shapeId: hit.id,
           shapesOrigin: origin,
+          moved: false,
         };
       } else {
         if (!e.shiftKey) clearSelection();
@@ -120,7 +157,18 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
         };
       }
     },
-    [tool, shapes, selectedIds, viewport, getCanvasPoint, addShape, setIsDrawing, setDrawingShape, selectOne, clearSelection, addToSelection]
+    [
+      tool,
+      shapes,
+      selectedIds,
+      getCanvasPoint,
+      setIsDrawing,
+      setDrawingShape,
+      selectOne,
+      clearSelection,
+      addToSelection,
+      push,
+    ]
   );
 
   const handleMouseMove = useCallback(
@@ -146,9 +194,17 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
 
       if (d.type === "draw" && drawingShape) {
         const start = d.startCanvas;
-        const { x, y, width, height } = normalizeRect(start.x, start.y, cp.x, cp.y);
+        const { x, y, width, height } = normalizeRect(
+          start.x,
+          start.y,
+          cp.x,
+          cp.y
+        );
 
-        if (drawingShape.type === "arrow" || drawingShape.type === "line") {
+        if (
+          drawingShape.type === "arrow" ||
+          drawingShape.type === "line"
+        ) {
           setDrawingShape({
             ...drawingShape,
             x,
@@ -175,21 +231,34 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
       if (d.type === "move" && d.shapesOrigin) {
         const dx = cp.x - d.startCanvas.x;
         const dy = cp.y - d.startCanvas.y;
-        d.shapesOrigin.forEach((origin, id) => {
-          updateShape(id, { x: origin.x + dx, y: origin.y + dy });
-        });
+        // Only move if actually dragged (avoids jitter on click)
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+          drag.current.moved = true;
+          d.shapesOrigin.forEach((origin, id) => {
+            updateShape(id, { x: origin.x + dx, y: origin.y + dy });
+          });
+        }
         return;
       }
 
       if (d.type === "resize" && d.resizeOrigin && d.shapeId) {
         const { x: ox, y: oy, width: ow, height: oh } = d.resizeOrigin;
-        let nx = ox, ny = oy, nw = ow, nh = oh;
+        let nx = ox,
+          ny = oy,
+          nw = ow,
+          nh = oh;
         const h = d.resizeHandle!;
 
         if (h.includes("e")) nw = cp.x - ox;
         if (h.includes("s")) nh = cp.y - oy;
-        if (h.includes("w")) { nw = ox + ow - cp.x; nx = cp.x; }
-        if (h.includes("n")) { nh = oy + oh - cp.y; ny = cp.y; }
+        if (h.includes("w")) {
+          nw = ox + ow - cp.x;
+          nx = cp.x;
+        }
+        if (h.includes("n")) {
+          nh = oy + oh - cp.y;
+          ny = cp.y;
+        }
 
         updateShape(d.shapeId, {
           x: nx,
@@ -200,7 +269,7 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
         return;
       }
 
-      if (d.type === "select-box" && d.selectionBox) {
+      if (d.type === "select-box") {
         const sb = {
           x: d.startCanvas.x,
           y: d.startCanvas.y,
@@ -208,11 +277,30 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
           height: cp.y - d.startCanvas.y,
         };
         drag.current.selectionBox = sb;
-        useCanvasStore.setState({ drawingShape: { type: "rectangle", id: "__selection__", ...sb, fill: "rgba(12,102,228,0.06)", stroke: "#0C66E4", strokeWidth: 1, opacity: 1, zIndex: 9999 } as Shape });
+        useCanvasStore.setState({
+          drawingShape: {
+            type: "rectangle",
+            id: "__selection__",
+            ...sb,
+            fill: "rgba(12,102,228,0.06)",
+            stroke: "#0C66E4",
+            strokeWidth: 1,
+            opacity: 1,
+            zIndex: 9999,
+          } as Shape,
+        });
         return;
       }
     },
-    [drawingShape, getCanvasPoint, panBy, updateShape, setDrawingShape, setCursorPosition, viewport]
+    [
+      drawingShape,
+      getCanvasPoint,
+      panBy,
+      updateShape,
+      setDrawingShape,
+      setCursorPosition,
+      viewport,
+    ]
   );
 
   const handleMouseUp = useCallback(
@@ -222,30 +310,58 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
       if (d.type === "draw" && drawingShape) {
         setIsDrawing(false);
         setDrawingShape(null);
-        if (drawingShape.width > 2 || drawingShape.height > 2 || drawingShape.type === "freedraw") {
+        if (
+          drawingShape.width > 2 ||
+          drawingShape.height > 2 ||
+          drawingShape.type === "freedraw"
+        ) {
           push(shapes);
           addShape(drawingShape);
           selectOne(drawingShape.id);
           if (!["freedraw", "arrow", "line"].includes(drawingShape.type)) {
             setTool("select");
           }
+          // Open text editor immediately after placing text shape
+          if (drawingShape.type === "text" && onTextEdit) {
+            setTimeout(() => onTextEdit(drawingShape.id), 50);
+          }
         }
-      } else if (d.type === "move" && d.shapesOrigin) {
-        push(shapes);
+      } else if (d.type === "move") {
+        // If we didn't actually move, pop the history entry we pushed optimistically
+        if (!d.moved) {
+          useHistoryStore.getState().undo(shapes);
+        }
       } else if (d.type === "resize") {
         push(shapes);
       } else if (d.type === "select-box" && d.selectionBox) {
         const sb = d.selectionBox;
         const hits = shapes
-          .filter((s) => selectionBoxHitsShape(sb.x, sb.y, sb.width, sb.height, s))
+          .filter((s) =>
+            selectionBoxHitsShape(sb.x, sb.y, sb.width, sb.height, s)
+          )
           .map((s) => s.id);
         if (hits.length > 0) selectMany(hits);
         setDrawingShape(null);
       }
 
-      drag.current = { type: "none", startScreen: { x: 0, y: 0 }, startCanvas: { x: 0, y: 0 } };
+      drag.current = {
+        type: "none",
+        startScreen: { x: 0, y: 0 },
+        startCanvas: { x: 0, y: 0 },
+      };
     },
-    [drawingShape, shapes, addShape, setIsDrawing, setDrawingShape, selectOne, selectMany, push]
+    [
+      drawingShape,
+      shapes,
+      addShape,
+      setIsDrawing,
+      setDrawingShape,
+      selectOne,
+      selectMany,
+      push,
+      setTool,
+      onTextEdit,
+    ]
   );
 
   const handleWheel = useCallback(
@@ -277,7 +393,12 @@ export function useCanvasEvents(svgRef: React.RefObject<SVGSVGElement | null>) {
         startCanvas: cp,
         shapeId: shape.id,
         resizeHandle: handle,
-        resizeOrigin: { x: shape.x, y: shape.y, width: shape.width, height: shape.height },
+        resizeOrigin: {
+          x: shape.x,
+          y: shape.y,
+          width: shape.width,
+          height: shape.height,
+        },
       };
     },
     [getCanvasPoint, push, shapes]

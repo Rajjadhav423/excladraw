@@ -1,8 +1,14 @@
 "use client";
 import React, { memo } from "react";
-import { Search, Share2, Users, ChevronDown } from "lucide-react";
+import { Search, Share2, ChevronDown, Sun, Moon } from "lucide-react";
+import { useThemeStore } from "@/stores/themeStore";
+import { useTheme } from "@/hooks/useTheme";
 
 export default memo(function TopNav() {
+  const { toggle } = useThemeStore();
+  const theme = useTheme();
+  const dark = theme === "dark";
+
   return (
     <header
       style={{
@@ -11,8 +17,8 @@ export default memo(function TopNav() {
         alignItems: "center",
         padding: "0 16px",
         gap: 12,
-        background: "#FFFFFF",
-        borderBottom: "1px solid #DCDFE4",
+        background: "var(--bg-panel)",
+        borderBottom: "1px solid var(--border)",
         zIndex: 20,
         flexShrink: 0,
       }}
@@ -37,20 +43,12 @@ export default memo(function TopNav() {
             <rect x="9" y="9" width="5" height="5" rx="1" fill="white" opacity="0.9" />
           </svg>
         </div>
-        <span
-          style={{
-            fontWeight: 700,
-            fontSize: 15,
-            color: "#172B4D",
-            letterSpacing: "-0.2px",
-          }}
-        >
+        <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)", letterSpacing: "-0.2px" }}>
           BoardFlow
         </span>
       </div>
 
-      {/* Divider */}
-      <div style={{ width: 1, height: 20, background: "#DCDFE4" }} />
+      <div style={{ width: 1, height: 20, background: "var(--border)" }} />
 
       {/* Board name */}
       <button
@@ -63,18 +61,17 @@ export default memo(function TopNav() {
           cursor: "pointer",
           padding: "4px 6px",
           borderRadius: 4,
-          color: "#172B4D",
+          color: "var(--text-primary)",
           fontSize: 14,
           fontWeight: 500,
         }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#F1F2F4")}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--bg-hover)")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}
       >
         Untitled Board
-        <ChevronDown size={14} color="#626F86" />
+        <ChevronDown size={14} color="var(--text-muted)" />
       </button>
 
-      {/* Spacer */}
       <div style={{ flex: 1 }} />
 
       {/* Search */}
@@ -83,13 +80,14 @@ export default memo(function TopNav() {
           display: "flex",
           alignItems: "center",
           gap: 6,
-          background: "#F1F2F4",
+          background: "var(--bg-panel-alt)",
+          border: "1px solid var(--border)",
           borderRadius: 6,
           padding: "6px 10px",
           width: 220,
         }}
       >
-        <Search size={14} color="#626F86" />
+        <Search size={14} color="var(--text-muted)" />
         <input
           placeholder="Search shapes…"
           style={{
@@ -97,20 +95,44 @@ export default memo(function TopNav() {
             background: "transparent",
             outline: "none",
             fontSize: 13,
-            color: "#172B4D",
+            color: "var(--text-primary)",
             width: "100%",
           }}
         />
       </div>
 
-      {/* Share button */}
+      {/* Theme toggle */}
+      <button
+        onClick={toggle}
+        title={dark ? "Switch to light mode" : "Switch to dark mode"}
+        style={{
+          width: 34,
+          height: 34,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 6,
+          border: "1px solid var(--border)",
+          background: "var(--bg-panel)",
+          cursor: "pointer",
+          color: "var(--text-secondary)",
+          flexShrink: 0,
+          transition: "background 0.15s",
+        }}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--bg-hover)")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--bg-panel)")}
+      >
+        {dark ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+
+      {/* Share */}
       <button
         style={{
           display: "flex",
           alignItems: "center",
           gap: 6,
           padding: "6px 14px",
-          background: "#0C66E4",
+          background: "var(--accent)",
           color: "white",
           border: "none",
           borderRadius: 4,
@@ -119,8 +141,8 @@ export default memo(function TopNav() {
           cursor: "pointer",
           flexShrink: 0,
         }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#0055CC")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#0C66E4")}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--accent-hover)")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--accent)")}
       >
         <Share2 size={14} />
         Share
