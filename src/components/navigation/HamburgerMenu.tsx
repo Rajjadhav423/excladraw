@@ -40,7 +40,6 @@ export default memo(function HamburgerMenu() {
         onClick={() => setOpen((v) => !v)}
         title="Menu"
         style={{
-          position: "absolute", top: 12, left: 12, zIndex: 60,
           width: 36, height: 36,
           display: "flex", alignItems: "center", justifyContent: "center",
           borderRadius: 8,
@@ -61,8 +60,9 @@ export default memo(function HamburgerMenu() {
         <div
           ref={panelRef}
           style={{
-            position: "absolute", top: 0, left: 0,
-            width: 248, height: "100%",
+            position: "fixed", top: 0, left: 0,
+            width: 248, height: "100vh",
+            pointerEvents: "auto",
             background: "var(--bg-panel)",
             borderRight: "1px solid var(--border)",
             zIndex: 200,

@@ -18,7 +18,14 @@ export default function CanvasContainer() {
   }, []);
 
   return (
-    <div ref={ref} style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+    <div
+      ref={ref}
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+      }}
+    >
       {size.width > 0 && (
         <Canvas width={size.width} height={size.height} />
       )}

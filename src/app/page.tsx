@@ -15,26 +15,42 @@ export default function BoardPage() {
   return (
     <div style={{
       position: "relative",
-      width: "100vw", height: "100vh",
+      width: "100vw",
+      height: "100vh",
       overflow: "hidden",
       background: "var(--bg-canvas)",
     }}>
-      {/* Full-screen canvas */}
+      {/* Full-screen canvas — sits at z-index 0, receives all pointer events */}
       <CanvasContainer />
 
-      {/* Floating toolbar — centered top */}
-      <FloatingToolbar />
+      {/* Overlay layer — pointer-events:none so clicks pass through to canvas */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 40,
+        pointerEvents: "none",
+      }}>
+        {/* Centered top toolbar */}
+        <div style={{ pointerEvents: "auto", position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)" }}>
+          <FloatingToolbar />
+        </div>
 
-      {/* Hamburger menu — top left */}
-      <HamburgerMenu />
+        {/* Hamburger — top left */}
+        <div style={{ pointerEvents: "auto", position: "absolute", top: 12, left: 12 }}>
+          <HamburgerMenu />
+        </div>
 
-      {/* Contextual properties panel — left side */}
-      <FloatingProperties />
+        {/* Contextual properties — left-center */}
+        <div style={{ pointerEvents: "auto", position: "absolute", top: "50%", left: 12, transform: "translateY(-50%)" }}>
+          <FloatingProperties />
+        </div>
 
-      {/* Bottom controls */}
-      <BottomBar />
+        {/* Bottom bar */}
+        <div style={{ pointerEvents: "auto", position: "absolute", bottom: 12, left: 12, right: 12 }}>
+          <BottomBar />
+        </div>
+      </div>
 
-      {/* Toast */}
       <Toast messages={messages} onDismiss={() => {}} />
     </div>
   );

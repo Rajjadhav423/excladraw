@@ -90,9 +90,6 @@ const FloatingProperties = memo(function FloatingProperties() {
 
   return (
     <div style={{
-      position: "absolute",
-      top: "50%", left: 12,
-      transform: "translateY(-50%)",
       width: 208,
       background: "var(--bg-panel)",
       border: "1px solid var(--border)",

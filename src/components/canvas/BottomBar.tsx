@@ -20,20 +20,15 @@ function BBtn({ onClick, title, children, disabled, divider }: {
 }) {
   return (
     <button onClick={onClick} title={title} disabled={disabled} style={{
-      width: 32, height: 28,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      border: "none",
-      borderLeft: divider ? "1px solid var(--border)" : "none",
-      background: "transparent",
-      cursor: disabled ? "default" : "pointer",
+      width: 32, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+      border: "none", borderLeft: divider ? "1px solid var(--border)" : "none",
+      background: "transparent", cursor: disabled ? "default" : "pointer",
       color: disabled ? "var(--text-subtle)" : "var(--text-secondary)",
       opacity: disabled ? 0.38 : 1,
     }}
       onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = "var(--bg-hover)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-    >
-      {children}
-    </button>
+    >{children}</button>
   );
 }
 
@@ -45,93 +40,62 @@ export default memo(function BottomBar() {
   const zoomPercent = Math.round(viewport.zoom * 100);
 
   return (
-    <>
-      {/* Bottom-left */}
-      <div style={{
-        position: "absolute", bottom: 12, left: 12,
-        display: "flex", alignItems: "center", gap: 6, zIndex: 50,
-      }}>
+    /* This div fills the bottom row; contents are positioned within it */
+    <div style={{ position: "relative", height: 40, width: "100%" }}>
+
+      {/* Left: zoom + undo */}
+      <div style={{ position: "absolute", left: 0, top: 0, display: "flex", gap: 6 }}>
         <div style={PILL}>
-          <BBtn onClick={() => zoomTo(viewport.zoom / 1.2)} title="Zoom out">
-            <ZoomOut size={14} strokeWidth={2} />
-          </BBtn>
+          <BBtn onClick={() => zoomTo(viewport.zoom / 1.2)} title="Zoom out"><ZoomOut size={14} strokeWidth={2} /></BBtn>
           <button onClick={resetViewport} title="Reset zoom" style={{
             padding: "0 8px", height: 28, border: "none",
-            borderLeft: "1px solid var(--border)",
-            borderRight: "1px solid var(--border)",
+            borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)",
             background: "transparent", cursor: "pointer",
-            fontSize: 12, fontWeight: 700,
-            color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums",
-            minWidth: 48, textAlign: "center",
+            fontSize: 12, fontWeight: 700, color: "var(--text-secondary)",
+            fontVariantNumeric: "tabular-nums", minWidth: 48, textAlign: "center",
           }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            {zoomPercent}%
-          </button>
-          <BBtn onClick={() => zoomTo(viewport.zoom * 1.2)} title="Zoom in">
-            <ZoomIn size={14} strokeWidth={2} />
-          </BBtn>
+          >{zoomPercent}%</button>
+          <BBtn onClick={() => zoomTo(viewport.zoom * 1.2)} title="Zoom in"><ZoomIn size={14} strokeWidth={2} /></BBtn>
         </div>
 
         <div style={PILL}>
-          <BBtn
-            onClick={() => { const p = undo(shapes); if (p) { setShapes(p); clearSelection(); } }}
-            title="Undo (Ctrl+Z)" disabled={!canUndo}
-          >
-            <Undo2 size={14} strokeWidth={2} />
-          </BBtn>
-          <BBtn
-            onClick={() => { const n = redo(shapes); if (n) { setShapes(n); clearSelection(); } }}
-            title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} divider
-          >
-            <Redo2 size={14} strokeWidth={2} />
-          </BBtn>
+          <BBtn onClick={() => { const p = undo(shapes); if (p) { setShapes(p); clearSelection(); } }} title="Undo (Ctrl+Z)" disabled={!canUndo}><Undo2 size={14} strokeWidth={2} /></BBtn>
+          <BBtn onClick={() => { const n = redo(shapes); if (n) { setShapes(n); clearSelection(); } }} title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} divider><Redo2 size={14} strokeWidth={2} /></BBtn>
         </div>
       </div>
 
-      {/* Cursor coords — center bottom */}
+      {/* Center: cursor coords */}
       <div style={{
-        position: "absolute", bottom: 18, left: "50%",
-        transform: "translateX(-50%)",
-        fontSize: 11, fontWeight: 500,
-        color: "var(--text-subtle)",
-        fontVariantNumeric: "tabular-nums",
-        zIndex: 50, pointerEvents: "none",
-        letterSpacing: "0.02em",
+        position: "absolute", left: "50%", top: "50%",
+        transform: "translate(-50%,-50%)",
+        fontSize: 11, fontWeight: 500, color: "var(--text-subtle)",
+        fontVariantNumeric: "tabular-nums", letterSpacing: "0.02em",
+        pointerEvents: "none",
       }}>
         {cursorPosition.x}, {cursorPosition.y}
       </div>
 
-      {/* Bottom-right */}
-      <div style={{
-        position: "absolute", bottom: 12, right: 12,
-        display: "flex", alignItems: "center", gap: 6, zIndex: 50,
-      }}>
+      {/* Right: share + icon */}
+      <div style={{ position: "absolute", right: 0, top: 0, display: "flex", gap: 6, alignItems: "center" }}>
         <button style={{
           display: "flex", alignItems: "center", gap: 6,
-          padding: "5px 14px",
-          background: "var(--accent)", color: "white",
-          border: "none", borderRadius: 8,
-          fontSize: 13, fontWeight: 600, cursor: "pointer",
+          padding: "5px 14px", background: "var(--accent)", color: "white",
+          border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
           boxShadow: "var(--shadow-sm)",
         }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-hover)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "var(--accent)")}
-        >
-          <Share2 size={13} />
-          Share
-        </button>
+        ><Share2 size={13} />Share</button>
+
         <div style={{
           width: 32, height: 32, borderRadius: 8,
-          border: "1px solid var(--border)",
-          background: "var(--bg-panel)",
+          border: "1px solid var(--border)", background: "var(--bg-panel)",
           display: "flex", alignItems: "center", justifyContent: "center",
           color: "var(--accent)", boxShadow: "var(--shadow-sm)",
-        }}>
-          <Shield size={15} />
-        </div>
+        }}><Shield size={15} /></div>
       </div>
-    </>
+    </div>
   );
 });
