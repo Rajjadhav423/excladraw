@@ -22,14 +22,15 @@ interface Props {
 }
 
 const CURSOR_MAP: Record<string, string> = {
-  select: "default",
-  hand: "grab",
+  select:    "default",
+  hand:      "grab",
   rectangle: "crosshair",
-  ellipse: "crosshair",
-  arrow: "crosshair",
-  line: "crosshair",
-  text: "text",
-  freedraw: "crosshair",
+  ellipse:   "crosshair",
+  arrow:     "crosshair",
+  line:      "crosshair",
+  text:      "text",
+  freedraw:  "crosshair",
+  eraser:    "cell",
 };
 
 export default function Canvas({ width, height }: Props) {

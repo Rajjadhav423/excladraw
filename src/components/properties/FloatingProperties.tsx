@@ -1,111 +1,252 @@
 "use client";
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useRef, useState } from "react";
 import {
   BringToFront, SendToBack, ChevronUp, ChevronDown,
-  AlignLeft, AlignCenter, AlignRight, Copy, Trash2,
+  AlignLeft, AlignCenter, AlignRight, Copy, Trash2, Group, Link,
 } from "lucide-react";
 import { useSelectionStore } from "@/stores/selectionStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useHistoryStore } from "@/stores/historyStore";
-import { Shape, TextShape } from "@/types";
-import { PanelSection, ColorSwatch, SliderRow, Separator, Label, Button, NumberInput } from "@/components/ui";
+import { Shape, TextShape, StrokeStyle, FillStyle, EdgeStyle } from "@/types";
+import { NumberInput } from "@/components/ui";
+import { ColorPicker } from "@/components/ui";
+import {
+  PanelHeader,
+  PropertySection,
+  SectionDivider,
+  PropertyButtonGroup,
+  PropertySlider,
+} from "./primitives";
 
-const STROKE_COLORS = [
-  "#172B4D", "#CA3521", "#1F845A", "#0C66E4",
-  "#946F00", "#6E5DC6", "#C2255C", "#000000",
-];
-const FILL_COLORS = [
-  "none",    "#FFFFFF", "#FFECEB", "#DCFFF1",
-  "#E9F2FF", "#FFF7D6", "#F3F0FF", "#F1F2F4",
-];
-
+/* ─── Shape display names ────────────────────────────────────────────────── */
 const SHAPE_LABELS: Record<string, string> = {
   rectangle: "Rectangle",
-  ellipse: "Ellipse",
-  arrow: "Arrow",
-  line: "Line",
-  text: "Text",
-  freedraw: "Pen",
-  table: "Table",
+  ellipse:   "Ellipse",
+  arrow:     "Arrow",
+  line:      "Line",
+  text:      "Text",
+  freedraw:  "Pen",
 };
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+/* ─── Stroke-width preset values ─────────────────────────────────────────── */
+const SW_PRESETS = [1, 2, 4];
+
+/* ─── SVG icons for visual controls ─────────────────────────────────────── */
+const StrokeSolidIcon  = () => (
+  <svg width="24" height="6" aria-hidden>
+    <line x1="2" y1="3" x2="22" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+const StrokeDashedIcon = () => (
+  <svg width="24" height="6" aria-hidden>
+    <line x1="2" y1="3" x2="22" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="5 3"/>
+  </svg>
+);
+const StrokeDottedIcon = () => (
+  <svg width="24" height="6" aria-hidden>
+    <line x1="2" y1="3" x2="22" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="1.5 4"/>
+  </svg>
+);
+const StrokeWidthThinIcon   = () => <svg width="24" height="12" aria-hidden><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
+const StrokeWidthMediumIcon = () => <svg width="24" height="12" aria-hidden><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="3"   strokeLinecap="round"/></svg>;
+const StrokeWidthThickIcon  = () => <svg width="24" height="12" aria-hidden><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="5"   strokeLinecap="round"/></svg>;
+const FillNoneIcon  = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+    <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+    <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" strokeWidth="1"/>
+  </svg>
+);
+const FillHatchIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+    <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+    <line x1="5" y1="2" x2="2" y2="5"  stroke="currentColor" strokeWidth="1"/>
+    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1"/>
+    <line x1="15" y1="2" x2="2" y2="15" stroke="currentColor" strokeWidth="1"/>
+    <line x1="15" y1="7" x2="7" y2="15" stroke="currentColor" strokeWidth="1"/>
+    <line x1="15" y1="12" x2="12" y2="15" stroke="currentColor" strokeWidth="1"/>
+  </svg>
+);
+const FillSolidIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+    <rect x="2" y="2" width="12" height="12" rx="2" fill="currentColor" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
+  </svg>
+);
+const EdgeSharpIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+    <rect x="2" y="2" width="12" height="12" rx="0" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+  </svg>
+);
+const EdgeRoundIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+    <rect x="2" y="2" width="12" height="12" rx="4" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+  </svg>
+);
+
+/* ─── Colour swatch trigger ──────────────────────────────────────────────── */
+function ColorSwatch({ value }: { value: string }) {
+  const isNone = !value || value === "none";
   return (
-    <div style={{
-      fontSize: 10,
-      fontWeight: 700,
-      letterSpacing: "0.08em",
-      textTransform: "uppercase",
-      color: "var(--ads-text-subtle)",
-      padding: "8px 12px 4px",
-    }}>
-      {children}
+    <button
+      title={isNone ? "None" : value}
+      style={{
+        width: "var(--ads-height-sm)",
+        height: "var(--ads-height-sm)",
+        borderRadius: "var(--ads-radius-sm)",
+        border: "1.5px solid var(--ads-border-input)",
+        background: isNone ? "transparent" : value,
+        cursor: "pointer",
+        position: "relative",
+        flexShrink: 0,
+        padding: 0,
+      }}
+    >
+      {isNone && (
+        <svg
+          viewBox="0 0 24 24"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", borderRadius: "var(--ads-radius-sm)" }}
+        >
+          <line x1="3" y1="21" x2="21" y2="3" stroke="var(--ads-danger)" strokeWidth="1.5"/>
+        </svg>
+      )}
+    </button>
+  );
+}
+
+/* ─── Color field row: swatch + picker + hex label ───────────────────────── */
+function ColorField({
+  value, onChange,
+}: {
+  value?: string;
+  onChange: (c: string) => void;
+}) {
+  const { recentColors, addRecentColor } = useCanvasStore();
+  const display = value ?? "none";
+  const [open, setOpen] = useState(false);
+  const swatchRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "var(--ads-sp-100)" }}>
+      <button
+        ref={swatchRef}
+        onClick={() => setOpen((v) => !v)}
+        style={{ padding: 0, border: "none", background: "none", cursor: "pointer", lineHeight: 0 }}
+      >
+        <ColorSwatch value={display} />
+      </button>
+      <ColorPicker
+        anchorRef={swatchRef}
+        open={open}
+        onOpenChange={setOpen}
+        value={display}
+        onChange={onChange}
+        recentColors={recentColors}
+        onAddRecent={addRecentColor}
+      />
+      <span style={{
+        fontSize: "var(--ads-font-size-xs)",
+        fontWeight: "var(--ads-font-weight-medium)",
+        color: "var(--ads-text-secondary)",
+        fontFamily: "var(--ads-font-family-mono)",
+        letterSpacing: "0.04em",
+        lineHeight: "var(--ads-line-height-xs)",
+      }}>
+        {display === "none" ? "None" : display.toUpperCase()}
+      </span>
     </div>
   );
 }
 
-function Row({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ padding: "2px 12px 6px", display: "flex", flexDirection: "column", gap: 4 }}>
-      {children}
-    </div>
-  );
-}
-
-function GeomField({ label, value, onChange, min, max }: {
-  label: string; value: number; onChange: (v: number) => void;
-  min?: number; max?: number;
+/* ─── Action button row (bottom of panel) ────────────────────────────────── */
+function ActionRow({ icon, label, onClick, danger }: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <span style={{
-        fontSize: 11, fontWeight: 600, color: "var(--ads-text-subtle)",
-        width: 14, flexShrink: 0, textAlign: "center",
-      }}>{label}</span>
-      <NumberInput
-        min={min ?? -99999} max={max ?? 99999}
-        value={Math.round(value)}
-        onChange={onChange}
-        style={{ flex: 1 }}
-      />
-    </div>
+    <button
+      title={label}
+      onClick={onClick}
+      style={{
+        flex: 1,
+        height: "var(--ads-height-md)",
+        borderRadius: "var(--ads-radius-sm)",
+        border: "1px solid var(--ads-border)",
+        background: "var(--ads-surface-sunken)",
+        color: danger ? "var(--ads-text-danger)" : "var(--ads-icon-subtle)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background var(--ads-transition-fast), color var(--ads-transition-fast)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = danger
+          ? "var(--ads-surface-danger)"
+          : "var(--ads-surface-hovered)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "var(--ads-surface-sunken)";
+      }}
+    >
+      {icon}
+    </button>
   );
 }
 
+/* ─── Main Panel ─────────────────────────────────────────────────────────── */
 const FloatingProperties = memo(function FloatingProperties() {
   const { selectedIds } = useSelectionStore();
-  const { shapes, updateShape, duplicateShapes, deleteShapes,
-    bringForward, sendBackward, bringToFront, sendToBack } = useCanvasStore();
+  const {
+    shapes, updateShape, duplicateShapes, deleteShapes,
+    bringForward, sendBackward, bringToFront, sendToBack,
+  } = useCanvasStore();
   const { push } = useHistoryStore();
 
-  const selectedShapes = shapes.filter((s) => selectedIds.has(s.id));
-  const count = selectedShapes.length;
+  const sel   = shapes.filter((s) => selectedIds.has(s.id));
+  const count = sel.length;
+  const shape = count === 1 ? sel[0] : null;
 
-  const shape = count === 1 ? selectedShapes[0] : null;
+  /* Batch update all selected shapes */
+  const updateAll = useCallback((field: keyof Shape, val: unknown) => {
+    push(shapes);
+    sel.forEach((s) => updateShape(s.id, { [field]: val } as Partial<Shape>));
+  }, [sel, shapes, push, updateShape]);
 
-  const update = useCallback((field: keyof Shape, value: unknown) => {
+  /* Single-shape update */
+  const update = useCallback((field: keyof Shape, val: unknown) => {
     if (!shape) return;
     push(shapes);
-    updateShape(shape.id, { [field]: value } as Partial<Shape>);
+    updateShape(shape.id, { [field]: val } as Partial<Shape>);
   }, [shape, shapes, push, updateShape]);
-
-  const updateAll = useCallback((field: keyof Shape, value: unknown) => {
-    push(shapes);
-    selectedShapes.forEach((s) => updateShape(s.id, { [field]: value } as Partial<Shape>));
-  }, [selectedShapes, shapes, push, updateShape]);
 
   if (count === 0) return null;
 
-  const commonFill = selectedShapes.every((s) => s.fill === selectedShapes[0].fill)
-    ? selectedShapes[0].fill : undefined;
-  const commonStroke = selectedShapes.every((s) => s.stroke === selectedShapes[0].stroke)
-    ? selectedShapes[0].stroke : undefined;
-  const commonOpacity = selectedShapes.every((s) => s.opacity === selectedShapes[0].opacity)
-    ? selectedShapes[0].opacity : undefined;
-  const commonStrokeWidth = selectedShapes.every((s) => s.strokeWidth === selectedShapes[0].strokeWidth)
-    ? selectedShapes[0].strokeWidth : undefined;
+  /* Derive common values across selection */
+  const cv = <K extends keyof Shape>(key: K) =>
+    sel.every((s) => s[key] === sel[0][key]) ? sel[0][key] as Shape[K] : undefined;
 
-  const hasNoFill = selectedShapes.every((s) => ["arrow", "line", "freedraw"].includes(s.type));
+  const commonStroke      = cv("stroke");
+  const commonFill        = cv("fill");
+  const commonFillStyle   = cv("fillStyle")   as FillStyle | undefined;
+  const commonStrokeStyle = cv("strokeStyle") as StrokeStyle | undefined;
+  const commonStrokeWidth = cv("strokeWidth") as number | undefined;
+  const commonOpacity     = cv("opacity")     as number | undefined;
+  const commonRoundness   = cv("roundness")   as EdgeStyle | undefined;
+
+  const hasNoFill  = sel.every((s) => ["arrow", "line", "freedraw"].includes(s.type));
+  const isText     = shape?.type === "text";
+  const isRect     = shape && ["rectangle", "ellipse"].includes(shape.type);
+  const isLocked   = shape?.locked ?? false;
+
+  const panelTitle = count === 1
+    ? (SHAPE_LABELS[shape!.type] ?? shape!.type)
+    : `${count} objects`;
+
+  /* Stroke width: map numeric value to preset key */
+  const swPreset = commonStrokeWidth !== undefined
+    ? SW_PRESETS.includes(commonStrokeWidth) ? String(commonStrokeWidth) : undefined
+    : undefined;
 
   return (
     <div style={{
@@ -116,176 +257,242 @@ const FloatingProperties = memo(function FloatingProperties() {
       boxShadow: "var(--ads-shadow-overlay)",
       overflowY: "auto",
       maxHeight: "calc(100vh - 140px)",
+      scrollbarWidth: "thin",
+      display: "flex",
+      flexDirection: "column",
     }}>
 
-      {/* Header */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "8px 10px 8px 12px",
-        borderBottom: "1px solid var(--ads-border-subtle)",
-      }}>
-        <span style={{
-          fontSize: 12, fontWeight: 600,
-          color: "var(--ads-text-secondary)",
-          textTransform: "capitalize",
-        }}>
-          {count === 1
-            ? (SHAPE_LABELS[shape!.type] ?? shape!.type)
-            : `${count} shapes`}
-        </span>
-        <div style={{ display: "flex", gap: 2 }}>
-          <button
-            title="Duplicate"
-            onClick={() => { push(shapes); duplicateShapes([...selectedIds]); }}
-            style={actionBtnStyle}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--ads-surface-hovered)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-          >
-            <Copy size={13} strokeWidth={1.8} />
-          </button>
-          <button
-            title="Delete"
-            onClick={() => { push(shapes); deleteShapes([...selectedIds]); }}
-            style={{ ...actionBtnStyle, color: "var(--ads-text-danger)" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--ads-surface-danger)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-          >
-            <Trash2 size={13} strokeWidth={1.8} />
-          </button>
-        </div>
-      </div>
+      {/* ── 1. Sticky header ────────────────────────────────────────────── */}
+      <PanelHeader
+        title={panelTitle}
+        isLocked={isLocked}
+        onLock={() => update("locked" as keyof Shape, !isLocked)}
+        onDuplicate={() => { push(shapes); duplicateShapes([...selectedIds]); }}
+        onDelete={() => { push(shapes); deleteShapes([...selectedIds]); }}
+      />
 
-      {/* Geometry — only for single selection */}
-      {shape && (
-        <>
-          <SectionLabel>Position &amp; Size</SectionLabel>
-          <div style={{ padding: "0 12px 8px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-            <GeomField label="X" value={shape.x} onChange={(v) => update("x", v)} />
-            <GeomField label="Y" value={shape.y} onChange={(v) => update("y", v)} />
-            <GeomField label="W" value={shape.width} onChange={(v) => update("width", Math.max(1, v))} min={1} />
-            <GeomField label="H" value={shape.height} onChange={(v) => update("height", Math.max(1, v))} min={1} />
-          </div>
-          <div style={{ height: 1, background: "var(--ads-border-subtle)", margin: "0 0 2px" }} />
-        </>
-      )}
-
-      {/* Stroke */}
-      <SectionLabel>Stroke</SectionLabel>
-      <Row>
-        <ColorSwatch
-          colors={STROKE_COLORS}
-          value={commonStroke ?? ""}
+      {/* ── 2. Stroke colour ─────────────────────────────────────────────── */}
+      <PropertySection title="Stroke">
+        <ColorField
+          value={commonStroke as string | undefined}
           onChange={(c) => updateAll("stroke", c)}
         />
-      </Row>
+      </PropertySection>
 
-      {/* Fill */}
+      {/* ── 3. Background colour ─────────────────────────────────────────── */}
       {!hasNoFill && (
+        <PropertySection title="Background">
+          <ColorField
+            value={commonFill as string | undefined}
+            onChange={(c) => updateAll("fill", c)}
+          />
+        </PropertySection>
+      )}
+
+      <SectionDivider />
+
+      {/* ── 4. Fill style ────────────────────────────────────────────────── */}
+      {!hasNoFill && (
+        <PropertySection title="Fill">
+          <PropertyButtonGroup<FillStyle>
+            value={commonFillStyle}
+            onChange={(v) => updateAll("fillStyle", v)}
+            options={[
+              { value: "none",  title: "No fill",   label: <FillNoneIcon /> },
+              { value: "hatch", title: "Hatch fill", label: <FillHatchIcon /> },
+              { value: "solid", title: "Solid fill", label: <FillSolidIcon /> },
+            ]}
+          />
+        </PropertySection>
+      )}
+
+      {/* ── 5. Stroke width ──────────────────────────────────────────────── */}
+      <PropertySection title="Stroke width">
+        <PropertyButtonGroup<string>
+          value={swPreset}
+          onChange={(v) => updateAll("strokeWidth", parseInt(v))}
+          options={[
+            { value: "1", title: "Thin",   label: <StrokeWidthThinIcon /> },
+            { value: "2", title: "Medium", label: <StrokeWidthMediumIcon /> },
+            { value: "4", title: "Thick",  label: <StrokeWidthThickIcon /> },
+          ]}
+        />
+      </PropertySection>
+
+      {/* ── 6. Stroke style ──────────────────────────────────────────────── */}
+      <PropertySection title="Stroke style">
+        <PropertyButtonGroup<StrokeStyle>
+          value={commonStrokeStyle}
+          onChange={(v) => updateAll("strokeStyle", v)}
+          options={[
+            { value: "solid",  title: "Solid",  label: <StrokeSolidIcon /> },
+            { value: "dashed", title: "Dashed", label: <StrokeDashedIcon /> },
+            { value: "dotted", title: "Dotted", label: <StrokeDottedIcon /> },
+          ]}
+        />
+      </PropertySection>
+
+      {/* ── 7. Edges (rect / ellipse only) ───────────────────────────────── */}
+      {isRect && (
+        <PropertySection title="Edges">
+          <PropertyButtonGroup<EdgeStyle>
+            value={commonRoundness}
+            onChange={(v) => updateAll("roundness", v)}
+            options={[
+              { value: "sharp", title: "Sharp corners",   label: <EdgeSharpIcon /> },
+              { value: "round", title: "Rounded corners", label: <EdgeRoundIcon /> },
+            ]}
+          />
+        </PropertySection>
+      )}
+
+      <SectionDivider />
+
+      {/* ── 8. Opacity ───────────────────────────────────────────────────── */}
+      <PropertySection title="Opacity">
+        <PropertySlider
+          min={0} max={100} step={1}
+          value={Math.round((commonOpacity ?? sel[0].opacity) * 100)}
+          onChange={(v) => updateAll("opacity", v / 100)}
+          format={(v) => `${v}`}
+        />
+      </PropertySection>
+
+      {/* ── 9. Text settings (text shapes) ───────────────────────────────── */}
+      {isText && (
         <>
-          <SectionLabel>Fill</SectionLabel>
-          <Row>
-            <ColorSwatch
-              colors={FILL_COLORS}
-              value={commonFill ?? ""}
-              onChange={(c) => updateAll("fill", c)}
-            />
-          </Row>
+          <SectionDivider />
+          <PropertySection title="Text">
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--ads-sp-100)" }}>
+              {/* Font size */}
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--ads-sp-100)" }}>
+                <span style={{
+                  fontSize: "var(--ads-font-size-xxs)",
+                  fontWeight: "var(--ads-font-weight-semibold)",
+                  color: "var(--ads-text-subtle)",
+                  flexShrink: 0,
+                  width: "var(--ads-sp-400)",
+                  lineHeight: "var(--ads-line-height-xxs)",
+                }}>
+                  Size
+                </span>
+                <NumberInput
+                  min={8} max={96}
+                  value={(shape as TextShape).fontSize}
+                  onChange={(v) => update("fontSize" as keyof Shape, v)}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              {/* Alignment */}
+              <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
+                {(["left", "center", "right"] as const).map((a) => {
+                  const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
+                  const active = (shape as TextShape).textAlign === a;
+                  return (
+                    <button
+                      key={a}
+                      title={`Align ${a}`}
+                      onClick={() => update("textAlign" as keyof Shape, a)}
+                      style={{
+                        flex: 1,
+                        height: "var(--ads-height-md)",
+                        borderRadius: "var(--ads-radius-sm)",
+                        border: active
+                          ? "1.5px solid var(--ads-border-selected)"
+                          : "1px solid var(--ads-border)",
+                        background: active
+                          ? "var(--ads-surface-selected)"
+                          : "var(--ads-surface-sunken)",
+                        color: active
+                          ? "var(--ads-icon-selected)"
+                          : "var(--ads-icon-subtle)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "background var(--ads-transition-fast), border-color var(--ads-transition-fast)",
+                      }}
+                    >
+                      <Icon size={13} strokeWidth={1.8} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </PropertySection>
         </>
       )}
 
-      <div style={{ height: 1, background: "var(--ads-border-subtle)", margin: "4px 0 2px" }} />
+      <SectionDivider />
 
-      {/* Stroke width + Opacity */}
-      <div style={{ padding: "2px 10px 6px" }}>
-        <SliderRow
-          label="Stroke"
-          min={0.5} max={12} step={0.5}
-          value={commonStrokeWidth ?? selectedShapes[0].strokeWidth}
-          onChange={(v) => updateAll("strokeWidth", v)}
-        />
-        <SliderRow
-          label="Opacity"
-          min={0} max={1} step={0.05}
-          value={commonOpacity ?? selectedShapes[0].opacity}
-          onChange={(v) => updateAll("opacity", v)}
-          format={(v) => `${Math.round(v * 100)}%`}
-        />
-      </div>
-
-      {/* Text options — single text shape */}
-      {shape?.type === "text" && (
-        <>
-          <div style={{ height: 1, background: "var(--ads-border-subtle)", margin: "2px 0" }} />
-          <SectionLabel>Text</SectionLabel>
-          <div style={{ padding: "0 12px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ads-text-subtle)", width: 32, flexShrink: 0 }}>Size</span>
-              <NumberInput
-                min={8} max={96}
-                value={(shape as TextShape).fontSize}
-                onChange={(v) => update("fontSize" as keyof Shape, v)}
-                style={{ flex: 1 }}
-              />
-            </div>
-            <div style={{ display: "flex", gap: 4 }}>
-              {(["left", "center", "right"] as const).map((a) => {
-                const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
-                const isActive = (shape as TextShape).textAlign === a;
-                return (
-                  <button
-                    key={a}
-                    title={`Align ${a}`}
-                    onClick={() => update("textAlign" as keyof Shape, a)}
-                    style={{
-                      flex: 1, height: 28,
-                      borderRadius: "var(--ads-radius-sm)",
-                      border: isActive ? "1.5px solid var(--ads-border-selected)" : "1.5px solid var(--ads-border)",
-                      background: isActive ? "var(--ads-surface-selected)" : "var(--ads-surface-sunken)",
-                      color: isActive ? "var(--ads-icon-selected)" : "var(--ads-icon-subtle)",
-                      cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "background var(--ads-transition-fast), border-color var(--ads-transition-fast)",
-                    }}
-                  >
-                    <Icon size={13} strokeWidth={1.8} />
-                  </button>
-                );
-              })}
-            </div>
+      {/* ── 10. Layers ───────────────────────────────────────────────────── */}
+      {shape && (
+        <PropertySection title="Layers">
+          <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
+            {[
+              { icon: <SendToBack   size={13} strokeWidth={1.8} />, label: "Send to back",   fn: () => sendToBack(shape.id) },
+              { icon: <ChevronDown  size={13} strokeWidth={1.8} />, label: "Send backward",  fn: () => sendBackward(shape.id) },
+              { icon: <ChevronUp    size={13} strokeWidth={1.8} />, label: "Bring forward",  fn: () => bringForward(shape.id) },
+              { icon: <BringToFront size={13} strokeWidth={1.8} />, label: "Bring to front", fn: () => bringToFront(shape.id) },
+            ].map(({ icon, label, fn }) => (
+              <button
+                key={label}
+                title={label}
+                onClick={fn}
+                style={{
+                  flex: 1,
+                  height: "var(--ads-height-md)",
+                  borderRadius: "var(--ads-radius-sm)",
+                  border: "1px solid var(--ads-border)",
+                  background: "var(--ads-surface-sunken)",
+                  color: "var(--ads-icon-subtle)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "background var(--ads-transition-fast)",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--ads-surface-hovered)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--ads-surface-sunken)")}
+              >
+                {icon}
+              </button>
+            ))}
           </div>
-        </>
+        </PropertySection>
       )}
 
-      {/* Layer controls */}
-      <div style={{ height: 1, background: "var(--ads-border-subtle)", margin: "2px 0" }} />
-      <SectionLabel>Layer</SectionLabel>
-      <div style={{ padding: "2px 10px 10px", display: "flex", gap: 4 }}>
-        {shape && [
-          { icon: <SendToBack  size={12} strokeWidth={1.8} />, label: "Send to back",    fn: () => sendToBack(shape.id) },
-          { icon: <ChevronDown size={12} strokeWidth={1.8} />, label: "Send backward",   fn: () => sendBackward(shape.id) },
-          { icon: <ChevronUp   size={12} strokeWidth={1.8} />, label: "Bring forward",   fn: () => bringForward(shape.id) },
-          { icon: <BringToFront size={12} strokeWidth={1.8} />, label: "Bring to front", fn: () => bringToFront(shape.id) },
-        ].map(({ icon, label, fn }) => (
-          <Button key={label} variant="default" onClick={fn} title={label}
-            style={{ flex: 1, height: 28, padding: 0, justifyContent: "center" }}>
-            {icon}
-          </Button>
-        ))}
-      </div>
+      <SectionDivider />
+
+      {/* ── 11. Actions ──────────────────────────────────────────────────── */}
+      <PropertySection title="Actions">
+        <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
+          <ActionRow
+            icon={<Copy   size={13} strokeWidth={1.8} />}
+            label="Duplicate  Ctrl+D"
+            onClick={() => { push(shapes); duplicateShapes([...selectedIds]); }}
+          />
+          <ActionRow
+            icon={<Group  size={13} strokeWidth={1.8} />}
+            label="Group  Ctrl+G"
+            onClick={() => {}}
+          />
+          <ActionRow
+            icon={<Link   size={13} strokeWidth={1.8} />}
+            label="Add link"
+            onClick={() => {}}
+          />
+          <ActionRow
+            icon={<Trash2 size={13} strokeWidth={1.8} />}
+            label="Delete  Del"
+            danger
+            onClick={() => { push(shapes); deleteShapes([...selectedIds]); }}
+          />
+        </div>
+      </PropertySection>
+
     </div>
   );
 });
-
-const actionBtnStyle: React.CSSProperties = {
-  width: 26, height: 26,
-  display: "flex", alignItems: "center", justifyContent: "center",
-  border: "none", borderRadius: "var(--ads-radius-sm)",
-  background: "transparent",
-  color: "var(--ads-icon-subtle)",
-  cursor: "pointer",
-  transition: "background var(--ads-transition-fast)",
-};
 
 export default FloatingProperties;

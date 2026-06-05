@@ -6,7 +6,8 @@ export type ToolType =
   | "line"
   | "text"
   | "freedraw"
-  | "hand";
+  | "hand"
+  | "eraser";
 
 export type ShapeType =
   | "rectangle"
@@ -15,6 +16,10 @@ export type ShapeType =
   | "line"
   | "text"
   | "freedraw";
+
+export type StrokeStyle = "solid" | "dashed" | "dotted";
+export type FillStyle  = "none" | "hatch" | "solid";
+export type EdgeStyle  = "sharp" | "round";
 
 export interface Point {
   x: number;
@@ -35,10 +40,15 @@ interface BaseShape {
   width: number;
   height: number;
   fill: string;
+  fillStyle: FillStyle;
   stroke: string;
   strokeWidth: number;
+  strokeStyle: StrokeStyle;
   opacity: number;
   zIndex: number;
+  locked: boolean;
+  /** Rounded corners on rect/ellipse label */
+  roundness: EdgeStyle;
 }
 
 export interface RectangleShape extends BaseShape {

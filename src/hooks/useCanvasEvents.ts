@@ -93,6 +93,19 @@ export function useCanvasEvents(
         return;
       }
 
+      // Eraser: hit-test and delete shape on click
+      if (tool === "eraser") {
+        const cp = getCanvasPoint(e);
+        const sorted = [...shapes].sort((a, b) => b.zIndex - a.zIndex);
+        const hit = sorted.find((s) => hitTestShape(s, cp.x, cp.y));
+        if (hit) {
+          push(shapes);
+          useCanvasStore.getState().deleteShapes([hit.id]);
+          useSelectionStore.getState().clearSelection();
+        }
+        return;
+      }
+
       if (isDrawingTool(tool)) {
         const cp = getCanvasPoint(e);
         const maxZ = shapes.reduce((m, s) => Math.max(m, s.zIndex), 0);
