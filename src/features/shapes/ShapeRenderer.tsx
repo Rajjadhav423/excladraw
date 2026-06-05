@@ -20,6 +20,8 @@ function getArrowHead(x1: number, y1: number, x2: number, y2: number, size = 10)
   ].join(" ");
 }
 
+const SEL_STROKE = "var(--selection-stroke, #2563EB)";
+
 const ShapeRenderer = memo(function ShapeRenderer({
   shape,
   isSelected,
@@ -27,15 +29,8 @@ const ShapeRenderer = memo(function ShapeRenderer({
   onClick,
   onMouseDown,
 }: Props) {
-  const selectionStyle = isSelected
-    ? {
-        outline: "none",
-        filter: "drop-shadow(0 0 0 2px #0C66E4)",
-      }
-    : {};
-
   const commonProps = {
-    style: { opacity: shape.opacity, cursor: "move", ...selectionStyle },
+    style: { opacity: shape.opacity, cursor: "move" } as React.CSSProperties,
     onClick,
     onMouseDown,
   };
@@ -48,8 +43,8 @@ const ShapeRenderer = memo(function ShapeRenderer({
         y={shape.y}
         width={Math.max(shape.width, 1)}
         height={Math.max(shape.height, 1)}
-        fill={shape.fill}
-        stroke={isSelected ? "#0C66E4" : shape.stroke}
+        fill={shape.fill === "none" ? "none" : shape.fill}
+        stroke={isSelected ? SEL_STROKE : shape.stroke}
         strokeWidth={isSelected ? Math.max(shape.strokeWidth, 2) : shape.strokeWidth}
         rx={3}
       />
@@ -66,8 +61,8 @@ const ShapeRenderer = memo(function ShapeRenderer({
         cy={cy}
         rx={Math.max(Math.abs(shape.width / 2), 1)}
         ry={Math.max(Math.abs(shape.height / 2), 1)}
-        fill={shape.fill}
-        stroke={isSelected ? "#0C66E4" : shape.stroke}
+        fill={shape.fill === "none" ? "none" : shape.fill}
+        stroke={isSelected ? SEL_STROKE : shape.stroke}
         strokeWidth={isSelected ? Math.max(shape.strokeWidth, 2) : shape.strokeWidth}
       />
     );
@@ -79,17 +74,14 @@ const ShapeRenderer = memo(function ShapeRenderer({
     const start = pts[0];
     const end = pts[pts.length - 1];
     const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-    const arrowPath =
-      shape.type === "arrow"
-        ? getArrowHead(start.x, start.y, end.x, end.y)
-        : "";
+    const arrowPath = shape.type === "arrow" ? getArrowHead(start.x, start.y, end.x, end.y) : "";
 
     return (
       <g {...commonProps} style={{ opacity: shape.opacity, cursor: "move" }}>
         <path
           d={pathD}
           fill="none"
-          stroke={isSelected ? "#0C66E4" : shape.stroke}
+          stroke={isSelected ? SEL_STROKE : shape.stroke}
           strokeWidth={isSelected ? Math.max(shape.strokeWidth, 2) : shape.strokeWidth}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -98,12 +90,12 @@ const ShapeRenderer = memo(function ShapeRenderer({
           <path
             d={arrowPath}
             fill="none"
-            stroke={isSelected ? "#0C66E4" : shape.stroke}
+            stroke={isSelected ? SEL_STROKE : shape.stroke}
             strokeWidth={isSelected ? Math.max(shape.strokeWidth, 2) : shape.strokeWidth}
             strokeLinecap="round"
           />
         )}
-        {/* invisible hit area */}
+        {/* Invisible wider hit area */}
         <path
           d={pathD}
           fill="none"
@@ -118,20 +110,7 @@ const ShapeRenderer = memo(function ShapeRenderer({
   if (shape.type === "text") {
     return (
       <g {...commonProps} style={{ opacity: isEditing ? 0 : shape.opacity, cursor: "move" }}>
-        {isSelected && !isEditing && (
-          <rect
-            x={shape.x - 2}
-            y={shape.y - 2}
-            width={shape.width + 4}
-            height={shape.height + 4}
-            fill="none"
-            stroke="#0C66E4"
-            strokeWidth={1.5}
-            strokeDasharray="4 2"
-            rx={2}
-          />
-        )}
-        {/* Invisible hit area for selection */}
+        {/* Invisible hit area */}
         <rect
           x={shape.x}
           y={shape.y}
@@ -140,13 +119,17 @@ const ShapeRenderer = memo(function ShapeRenderer({
           fill="transparent"
           stroke="none"
         />
-        <foreignObject x={shape.x} y={shape.y} width={Math.max(shape.width, 10)} height={Math.max(shape.height + 8, 32)}>
+        <foreignObject
+          x={shape.x} y={shape.y}
+          width={Math.max(shape.width, 10)}
+          height={Math.max(shape.height + 8, 32)}
+        >
           <div
             style={{
               fontSize: shape.fontSize,
               fontFamily: shape.fontFamily,
               textAlign: shape.textAlign,
-              color: shape.stroke !== "none" ? shape.stroke : "#172B4D",
+              color: shape.stroke !== "none" ? shape.stroke : "var(--text-primary, #172B4D)",
               userSelect: "none",
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
@@ -173,15 +156,13 @@ const ShapeRenderer = memo(function ShapeRenderer({
         />
       );
     }
-    const d = shape.points
-      .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
-      .join(" ");
+    const d = shape.points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
     return (
       <path
         {...commonProps}
         d={d}
         fill="none"
-        stroke={isSelected ? "#0C66E4" : shape.stroke}
+        stroke={isSelected ? SEL_STROKE : shape.stroke}
         strokeWidth={shape.strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"

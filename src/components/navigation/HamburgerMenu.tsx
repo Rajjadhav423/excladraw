@@ -32,9 +32,52 @@ export default memo(function HamburgerMenu() {
 
   return (
     <>
-      <Button variant="default" icon onClick={() => setOpen((v) => !v)} title="Menu">
-        <Menu size={16} strokeWidth={1.8} />
-      </Button>
+      {/* Logo + menu trigger */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title="BoardFlow menu"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "5px 10px 5px 7px",
+          background: "var(--ads-surface-default)",
+          border: "1px solid var(--ads-border)",
+          borderRadius: "var(--ads-radius-lg)",
+          boxShadow: "var(--ads-shadow-card)",
+          cursor: "pointer",
+          transition: "background var(--ads-transition-fast)",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--ads-surface-hovered)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "var(--ads-surface-default)")}
+      >
+        <div style={{
+          width: 22,
+          height: 22,
+          background: "linear-gradient(135deg, #0C66E4, #579DFF)",
+          borderRadius: 5,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="2" width="5" height="5" rx="1" fill="white" opacity="0.95"/>
+            <rect x="9" y="2" width="5" height="5" rx="1" fill="white" opacity="0.55"/>
+            <rect x="2" y="9" width="5" height="5" rx="1" fill="white" opacity="0.55"/>
+            <rect x="9" y="9" width="5" height="5" rx="1" fill="white" opacity="0.95"/>
+          </svg>
+        </div>
+        <span style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: "var(--ads-text-primary)",
+          letterSpacing: "-0.01em",
+        }}>
+          BoardFlow
+        </span>
+        <Menu size={12} strokeWidth={2} style={{ color: "var(--ads-icon-subtle)", marginLeft: 2 }} />
+      </button>
 
       {open && (
         <div

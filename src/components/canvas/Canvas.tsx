@@ -294,26 +294,28 @@ export default function Canvas({ width, height }: Props) {
         </g>
 
         {isEmpty && (
-          <g>
+          <g pointerEvents="none">
             <text
               x={width / 2}
-              y={height / 2 - 12}
+              y={height / 2 - 18}
               textAnchor="middle"
-              fill="var(--text-subtle)"
-              fontSize={15}
-              fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+              fill="var(--ads-text-disabled, #8993A4)"
+              fontSize={14}
+              fontWeight={500}
+              fontFamily="var(--font-inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif)"
+              letterSpacing="0.01em"
             >
-              Press R to draw a rectangle
+              Start drawing — pick a tool above
             </text>
             <text
               x={width / 2}
-              y={height / 2 + 12}
+              y={height / 2 + 8}
               textAnchor="middle"
-              fill="var(--text-subtle)"
-              fontSize={13}
-              fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+              fill="var(--ads-text-disabled, #8993A4)"
+              fontSize={12}
+              fontFamily="var(--font-inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif)"
             >
-              Use mouse wheel to zoom · Space + drag to pan
+              Scroll to zoom · Space + drag to pan · V to select
             </text>
           </g>
         )}

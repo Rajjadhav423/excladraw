@@ -20,35 +20,64 @@ export default function BoardPage() {
       overflow: "hidden",
       background: "var(--bg-canvas)",
     }}>
-      {/* Full-screen canvas — sits at z-index 0, receives all pointer events */}
+      {/* Full-screen canvas */}
       <CanvasContainer />
 
-      {/* Overlay layer — pointer-events:none so clicks pass through to canvas */}
+      {/* Overlay — pointer-events:none so clicks pass through to canvas */}
       <div style={{
         position: "absolute",
         inset: 0,
         zIndex: 40,
         pointerEvents: "none",
       }}>
-        {/* Centered top toolbar */}
-        <div style={{ pointerEvents: "auto", position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)" }}>
-          <FloatingToolbar />
-        </div>
 
-        {/* Hamburger — top left */}
-        <div style={{ pointerEvents: "auto", position: "absolute", top: 12, left: 12 }}>
+        {/* Top-left: hamburger menu / logo */}
+        <div style={{
+          pointerEvents: "auto",
+          position: "absolute",
+          top: 12,
+          left: 12,
+        }}>
           <HamburgerMenu />
         </div>
 
-        {/* Contextual properties — left-center */}
-        <div style={{ pointerEvents: "auto", position: "absolute", top: "50%", left: 12, transform: "translateY(-50%)" }}>
+        {/* Top-center: drawing toolbar */}
+        <div style={{
+          pointerEvents: "auto",
+          position: "absolute",
+          top: 12,
+          left: "50%",
+          transform: "translateX(-50%)",
+        }}>
+          <FloatingToolbar />
+        </div>
+
+        {/* Left side: contextual properties panel (Excalidraw-style) */}
+        <div style={{
+          pointerEvents: "auto",
+          position: "absolute",
+          top: 62,           /* clears the hamburger row */
+          left: 12,
+          bottom: 62,        /* clears the bottom bar */
+          overflowY: "auto",
+          scrollbarWidth: "thin",
+          display: "flex",
+          alignItems: "center",
+        }}>
           <FloatingProperties />
         </div>
 
-        {/* Bottom bar */}
-        <div style={{ pointerEvents: "auto", position: "absolute", bottom: 12, left: 12, right: 12 }}>
+        {/* Bottom: controls bar */}
+        <div style={{
+          pointerEvents: "auto",
+          position: "absolute",
+          bottom: 12,
+          left: 12,
+          right: 12,
+        }}>
           <BottomBar />
         </div>
+
       </div>
 
       <Toast messages={messages} onDismiss={() => {}} />
