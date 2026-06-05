@@ -86,7 +86,7 @@ const EdgeRoundIcon = () => (
 function ColorSwatch({ value }: { value: string }) {
   const isNone = !value || value === "none";
   return (
-    <button
+    <div
       title={isNone ? "None" : value}
       style={{
         width: "var(--ads-height-sm)",
@@ -108,7 +108,7 @@ function ColorSwatch({ value }: { value: string }) {
           <line x1="3" y1="21" x2="21" y2="3" stroke="var(--ads-danger)" strokeWidth="1.5"/>
         </svg>
       )}
-    </button>
+    </div>
   );
 }
 
