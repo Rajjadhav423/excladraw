@@ -114,10 +114,11 @@ function ColorSwatch({ value }: { value: string }) {
 
 /* ─── Color field row: swatch + picker + hex label ───────────────────────── */
 function ColorField({
-  value, onChange,
+  value, onChange, panelRef,
 }: {
   value?: string;
   onChange: (c: string) => void;
+  panelRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const { recentColors, addRecentColor } = useCanvasStore();
   const display = value ?? "none";
@@ -134,7 +135,8 @@ function ColorField({
         <ColorSwatch value={display} />
       </button>
       <ColorPicker
-        anchorRef={swatchRef}
+        anchorRef={panelRef as React.RefObject<HTMLElement | null>}
+        caretAnchorRef={swatchRef as React.RefObject<HTMLElement | null>}
         open={open}
         onOpenChange={setOpen}
         value={display}
@@ -202,6 +204,7 @@ const FloatingProperties = memo(function FloatingProperties() {
     bringForward, sendBackward, bringToFront, sendToBack,
   } = useCanvasStore();
   const { push } = useHistoryStore();
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const sel   = shapes.filter((s) => selectedIds.has(s.id));
   const count = sel.length;
@@ -249,7 +252,7 @@ const FloatingProperties = memo(function FloatingProperties() {
     : undefined;
 
   return (
-    <div style={{
+    <div ref={panelRef} style={{
       width: 220,
       background: "var(--ads-surface-default)",
       border: "1px solid var(--ads-border)",
@@ -276,6 +279,7 @@ const FloatingProperties = memo(function FloatingProperties() {
         <ColorField
           value={commonStroke as string | undefined}
           onChange={(c) => updateAll("stroke", c)}
+          panelRef={panelRef}
         />
       </PropertySection>
 
@@ -285,6 +289,7 @@ const FloatingProperties = memo(function FloatingProperties() {
           <ColorField
             value={commonFill as string | undefined}
             onChange={(c) => updateAll("fill", c)}
+            panelRef={panelRef}
           />
         </PropertySection>
       )}

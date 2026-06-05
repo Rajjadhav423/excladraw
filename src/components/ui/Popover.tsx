@@ -11,7 +11,7 @@ import { createPortal } from "react-dom";
 export type PopoverSide = "right" | "left" | "bottom" | "top";
 
 interface PopoverProps {
-  /** The element the popover is anchored to */
+  /** The element the popover is anchored to (used for positioning) */
   anchor: HTMLElement | null;
   open: boolean;
   onClose: () => void;
@@ -22,9 +22,17 @@ interface PopoverProps {
   gap?: number;
   /** Align popover top with anchor top (for side placements) */
   alignStart?: boolean;
+  /** Show a left-pointing caret connecting popover to anchor */
+  showCaret?: boolean;
+  /**
+   * Optional secondary anchor for caret vertical alignment.
+   * When set, the caret points at this element's vertical center
+   * instead of the positioning anchor's center.
+   */
+  caretAnchor?: HTMLElement | null;
 }
 
-interface Coords { left: number; top: number; }
+interface Coords { left: number; top: number; side: PopoverSide; }
 
 function computePosition(
   anchorRect: DOMRect,
@@ -37,10 +45,11 @@ function computePosition(
   const vh = window.innerHeight;
   const pw = popoverRect.width;
   const ph = popoverRect.height;
-  const margin = 8; // min distance from viewport edge
+  const margin = 8;
 
   let left = 0;
   let top  = 0;
+  let resolvedSide = side;
 
   if (side === "right") {
     left = anchorRect.right + gap;
@@ -48,9 +57,9 @@ function computePosition(
       ? anchorRect.top
       : anchorRect.top + anchorRect.height / 2 - ph / 2;
 
-    /* Flip to left if no room on right */
     if (left + pw > vw - margin) {
       left = anchorRect.left - pw - gap;
+      resolvedSide = "left";
     }
   } else if (side === "left") {
     left = anchorRect.left - pw - gap;
@@ -60,6 +69,7 @@ function computePosition(
 
     if (left < margin) {
       left = anchorRect.right + gap;
+      resolvedSide = "right";
     }
   } else if (side === "bottom") {
     left = anchorRect.left;
@@ -67,23 +77,22 @@ function computePosition(
 
     if (top + ph > vh - margin) {
       top = anchorRect.top - ph - gap;
+      resolvedSide = "top";
     }
   } else {
-    /* top */
     left = anchorRect.left;
     top  = anchorRect.top - ph - gap;
 
     if (top < margin) {
       top = anchorRect.bottom + gap;
+      resolvedSide = "bottom";
     }
   }
 
-  /* Clamp horizontal */
   left = Math.max(margin, Math.min(left, vw - pw - margin));
-  /* Clamp vertical */
   top  = Math.max(margin, Math.min(top,  vh - ph - margin));
 
-  return { left, top };
+  return { left, top, side: resolvedSide };
 }
 
 export function Popover({
@@ -94,15 +103,16 @@ export function Popover({
   preferSide = "right",
   gap = 8,
   alignStart = true,
+  showCaret = false,
+  caretAnchor,
 }: PopoverProps) {
   const [coords, setCoords] = useState<Coords | null>(null);
+  const [caretTop, setCaretTop] = useState<number | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
-  /* Only run in browser */
   useEffect(() => { setMounted(true); }, []);
 
-  /* Position calculation — runs after paint so we know the popover size */
   useLayoutEffect(() => {
     if (!open || !anchor || !popoverRef.current) return;
 
@@ -112,19 +122,27 @@ export function Popover({
       const { offsetWidth: pw, offsetHeight: ph } = popoverEl;
       const pos = computePosition(anchorRect, { width: pw, height: ph }, preferSide, gap, alignStart);
       setCoords(pos);
+
+      /* Compute caret position relative to the popover */
+      if (showCaret) {
+        const caretEl = caretAnchor ?? anchor;
+        const triggerRect = caretEl.getBoundingClientRect();
+        const triggerCenter = triggerRect.top + triggerRect.height / 2;
+        /* Clamp within popover bounds (8px from edges) */
+        const relTop = Math.max(12, Math.min(triggerCenter - pos.top, ph - 12));
+        setCaretTop(relTop);
+      }
     };
 
     measure();
-    /* Re-measure on scroll / resize */
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
     return () => {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
-  }, [open, anchor, preferSide, gap, alignStart]);
+  }, [open, anchor, caretAnchor, preferSide, gap, alignStart, showCaret]);
 
-  /* Close on outside click */
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -137,7 +155,6 @@ export function Popover({
         onClose();
       }
     };
-    /* Delay slightly so the opening click doesn't immediately close */
     const id = setTimeout(() => document.addEventListener("mousedown", handler), 10);
     return () => {
       clearTimeout(id);
@@ -145,7 +162,6 @@ export function Popover({
     };
   }, [open, anchor, onClose]);
 
-  /* Close on Escape */
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -154,6 +170,10 @@ export function Popover({
   }, [open, onClose]);
 
   if (!mounted) return null;
+
+  const side = coords?.side ?? preferSide;
+  const caretOnLeft  = side === "right";
+  const caretOnRight = side === "left";
 
   return createPortal(
     <div
@@ -165,17 +185,67 @@ export function Popover({
         top:  coords?.top  ?? -9999,
         left: coords?.left ?? -9999,
         zIndex: "var(--ads-z-dropdown)" as any,
-        /* Invisible while position is being calculated (avoids flash at 0,0) */
         visibility: coords ? "visible" : "hidden",
         background: "var(--ads-surface-overlay)",
         border: "1px solid var(--ads-border)",
         borderRadius: "var(--ads-radius-lg)",
         boxShadow: "var(--ads-shadow-overlay)",
-        animation: coords ? "fadeIn var(--ads-transition-fast)" : "none",
-        /* Prevent any parent overflow:hidden from clipping */
+        animation: coords ? "popoverFadeIn 120ms ease-out both" : "none",
         contain: "layout",
       }}
     >
+      {/* Left caret (when popover is to the right of anchor) */}
+      {showCaret && caretOnLeft && caretTop !== null && (
+        <div style={{
+          position: "absolute",
+          left: -7,
+          top: caretTop - 7,
+          width: 0,
+          height: 0,
+          borderTop: "7px solid transparent",
+          borderBottom: "7px solid transparent",
+          borderRight: "7px solid var(--ads-border)",
+          pointerEvents: "none",
+        }}>
+          <div style={{
+            position: "absolute",
+            left: 2,
+            top: -6,
+            width: 0,
+            height: 0,
+            borderTop: "6px solid transparent",
+            borderBottom: "6px solid transparent",
+            borderRight: "6px solid var(--ads-surface-overlay)",
+          }} />
+        </div>
+      )}
+
+      {/* Right caret (when popover is to the left of anchor) */}
+      {showCaret && caretOnRight && caretTop !== null && (
+        <div style={{
+          position: "absolute",
+          right: -7,
+          top: caretTop - 7,
+          width: 0,
+          height: 0,
+          borderTop: "7px solid transparent",
+          borderBottom: "7px solid transparent",
+          borderLeft: "7px solid var(--ads-border)",
+          pointerEvents: "none",
+        }}>
+          <div style={{
+            position: "absolute",
+            right: 2,
+            top: -6,
+            width: 0,
+            height: 0,
+            borderTop: "6px solid transparent",
+            borderBottom: "6px solid transparent",
+            borderLeft: "6px solid var(--ads-surface-overlay)",
+          }} />
+        </div>
+      )}
+
       {open && children}
     </div>,
     document.body
