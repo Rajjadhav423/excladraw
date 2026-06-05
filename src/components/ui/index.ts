@@ -9,3 +9,4 @@ export { NumberInput }  from "./NumberInput";
 export { Toast, useToast } from "./Toast";
 export { ColorPicker }  from "./ColorPicker";
 export { Popover }      from "./Popover";
+export { Toggle }       from "./Toggle";

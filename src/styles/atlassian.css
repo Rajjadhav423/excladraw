@@ -160,6 +160,12 @@
 
   --ads-nav-height:  56px;
   --ads-sidebar-width: 240px;
+
+  /* ── Toggle ───────────────────────────────────────────────────────── */
+  /* Atlassian canonical interactive-success green — same value both modes */
+  --ads-toggle-track-on:   #22A06B;   /* success-bold (same light + dark)  */
+  --ads-toggle-track-off:  #44546F;   /* neutral-bold light = color.background.neutral.bold */
+  --ads-toggle-thumb:      #FFFFFF;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -238,6 +244,11 @@
   --ads-shadow-raised:   0 3px 5px rgba(0,0,0,0.5),  0 0 1px rgba(0,0,0,0.4);
   --ads-shadow-overlay:  0 8px 16px rgba(0,0,0,0.6), 0 0 1px rgba(0,0,0,0.4);
   --ads-shadow-overflow: 0 4px 8px rgba(0,0,0,0.5),  0 0 1px rgba(0,0,0,0.4);
+
+  /* Toggle — dark overrides */
+  --ads-toggle-track-on:   #22A06B;   /* success-bold (unchanged in dark)   */
+  --ads-toggle-track-off:  #738496;   /* neutral-bold dark = ads-text-subtle dark */
+  --ads-toggle-thumb:      #FFFFFF;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -1002,3 +1013,80 @@
 .ads-animate-fade-in  { animation: ads-fade-in  0.15s ease; }
 .ads-animate-slide-up { animation: ads-slide-up 0.18s ease; }
 .ads-animate-scale-in { animation: ads-scale-in 0.15s ease; }
+
+/* ─────────────────────────────────────────────────────────────────────
+   22. TOGGLE
+   ───────────────────────────────────────────────────────────────────── */
+
+.ads-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 32px;
+  height: 16px;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  padding: 0;
+  box-sizing: content-box;
+  flex-shrink: 0;
+  cursor: pointer;
+  background-color: var(--ads-toggle-track-off);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  outline: none;
+}
+
+.ads-toggle[aria-checked="true"] {
+  background-color: var(--ads-toggle-track-on);
+}
+
+.ads-toggle:focus-visible {
+  border-color: var(--ads-border-focus);
+}
+
+.ads-toggle:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.ads-toggle:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* Sliding thumb */
+.ads-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--ads-toggle-thumb);
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: none;
+  box-shadow: none; /* Flat thumb, no shadow, no balloon look */
+}
+
+.ads-toggle[aria-checked="true"] .ads-toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* Track Icons */
+.ads-toggle-icon {
+  position: absolute;
+  top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.ads-toggle-icon-left {
+  left: 2px;
+}
+
+.ads-toggle-icon-right {
+  right: 2px;
+}

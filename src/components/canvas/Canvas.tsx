@@ -10,6 +10,7 @@ import { useCanvasStore } from "@/stores/canvasStore";
 import { useSelectionStore } from "@/stores/selectionStore";
 import { useViewportStore } from "@/stores/viewportStore";
 import { useToolStore } from "@/stores/toolStore";
+import { useCanvasSettingsStore } from "@/stores/canvasSettingsStore";
 import { useCanvasEvents } from "@/hooks/useCanvasEvents";
 import ShapeRenderer from "@/features/shapes/ShapeRenderer";
 import SelectionHandles from "@/features/shapes/SelectionHandles";
@@ -39,6 +40,7 @@ export default function Canvas({ width, height }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { shapes, drawingShape, gridSize, updateShape } = useCanvasStore();
+  const { canvasBackground, gridEnabled, gridColor, gridOpacity } = useCanvasSettingsStore();
   const { selectedIds } = useSelectionStore();
   const { viewport } = useViewportStore();
   const { tool } = useToolStore();
@@ -192,7 +194,11 @@ export default function Canvas({ width, height }: Props) {
         ref={svgRef}
         width={width}
         height={height}
-        style={{ cursor, display: "block", background: "var(--bg-canvas)" }}
+        style={{
+          cursor,
+          display: "block",
+          background: canvasBackground === "default" ? "var(--bg-canvas)" : canvasBackground,
+        }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -211,12 +217,13 @@ export default function Canvas({ width, height }: Props) {
               cx={gridSize * viewport.zoom}
               cy={gridSize * viewport.zoom}
               r={1}
-              fill="var(--dot-color)"
+              fill={gridColor}
+              opacity={gridOpacity}
             />
           </pattern>
         </defs>
 
-        <rect width={width} height={height} fill="url(#grid-pattern)" />
+        {gridEnabled && <rect width={width} height={height} fill="url(#grid-pattern)" />}
 
         <g
           transform={`translate(${viewport.x}, ${viewport.y}) scale(${viewport.zoom})`}
