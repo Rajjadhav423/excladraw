@@ -1,9 +1,13 @@
 import { Shape, ToolType, Point } from "@/types";
 import { generateId } from "./geometry";
 
-const DEFAULT_FILL = "#E8F0FE";
-const DEFAULT_STROKE = "#0C66E4";
-const DEFAULT_STROKE_WIDTH = 2;
+function getThemeDefaults() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  return {
+    fill:   isDark ? "#1e1e1e" : "#E8F0FE",
+    stroke: isDark ? "#e3e3e3" : "#0C66E4",
+  };
+}
 
 export function createShape(
   tool: ToolType,
@@ -11,6 +15,9 @@ export function createShape(
   end: Point,
   zIndex: number
 ): Shape | null {
+  const { fill: DEFAULT_FILL, stroke: DEFAULT_STROKE } = getThemeDefaults();
+  const DEFAULT_STROKE_WIDTH = 2;
+
   const base = {
     id: generateId(),
     fill: DEFAULT_FILL,
@@ -33,37 +40,16 @@ export function createShape(
       return { ...base, type: "ellipse", x, y, width, height };
 
     case "arrow":
-      return {
-        ...base,
-        type: "arrow",
-        x,
-        y,
-        width,
-        height,
-        points: [start, end],
-        fill: "none",
-        stroke: DEFAULT_STROKE,
-      };
+      return { ...base, type: "arrow", x, y, width, height, points: [start, end], fill: "none", stroke: DEFAULT_STROKE };
 
     case "line":
-      return {
-        ...base,
-        type: "line",
-        x,
-        y,
-        width,
-        height,
-        points: [start, end],
-        fill: "none",
-        stroke: DEFAULT_STROKE,
-      };
+      return { ...base, type: "line", x, y, width, height, points: [start, end], fill: "none", stroke: DEFAULT_STROKE };
 
     case "text":
       return {
         ...base,
         type: "text",
-        x: start.x,
-        y: start.y,
+        x: start.x, y: start.y,
         width: Math.max(width, 120),
         height: Math.max(height, 32),
         text: "Text",
@@ -71,21 +57,11 @@ export function createShape(
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         textAlign: "left",
         fill: "none",
-        stroke: "none",
+        stroke: DEFAULT_STROKE,
       };
 
     case "freedraw":
-      return {
-        ...base,
-        type: "freedraw",
-        x,
-        y,
-        width,
-        height,
-        points: [start],
-        fill: "none",
-        stroke: DEFAULT_STROKE,
-      };
+      return { ...base, type: "freedraw", x, y, width, height, points: [start], fill: "none", stroke: DEFAULT_STROKE };
 
     default:
       return null;

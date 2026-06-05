@@ -168,9 +168,9 @@ export default function Canvas({ width, height }: Props) {
       fontSize: editingShape.fontSize * viewport.zoom,
       fontFamily: editingShape.fontFamily,
       textAlign: editingShape.textAlign,
-      color: editingShape.stroke !== "none" ? editingShape.stroke : "#172B4D",
+      color: editingShape.stroke !== "none" ? editingShape.stroke : "var(--text-primary)",
       background: "transparent",
-      border: "1.5px solid #0C66E4",
+      border: "1.5px solid var(--accent)",
       borderRadius: 3,
       outline: "none",
       padding: "2px 4px",
@@ -209,7 +209,7 @@ export default function Canvas({ width, height }: Props) {
             <circle
               cx={gridSize * viewport.zoom}
               cy={gridSize * viewport.zoom}
-              r={0.8}
+              r={1}
               fill="var(--dot-color)"
             />
           </pattern>

@@ -1,25 +1,93 @@
 @import "tailwindcss";
 
+/* ── Jira / Atlassian Design Tokens ─────────────────────────────────── */
 :root {
-  --bg-app:        #F7F8F9;
-  --bg-canvas:     #F7F8F9;
-  --bg-panel:      #FFFFFF;
-  --bg-panel-alt:  #F7F8F9;
-  --bg-hover:      #F1F2F4;
-  --bg-active:     #E8F0FE;
-  --border:        #DCDFE4;
-  --border-light:  #EBECF0;
-  --text-primary:  #172B4D;
-  --text-secondary:#44546F;
-  --text-muted:    #626F86;
-  --text-subtle:   #8993A4;
-  --accent:        #0C66E4;
-  --accent-hover:  #0055CC;
-  --accent-bg:     #E8F0FE;
-  --dot-color:     #B3BAC5;
-  --shadow:        0 4px 12px rgba(0,0,0,0.12);
+  /* Surface */
+  --bg-app:             #F7F8F9;
+  --bg-canvas:          #F0F1F3;
+  --bg-panel:           #FFFFFF;
+  --bg-panel-alt:       #F7F8F9;
+  --bg-hover:           #F1F2F4;
+  --bg-active:          #E9F2FF;
+  --bg-selected:        #CCE0FF;
+
+  /* Borders */
+  --border:             #DCDFE4;
+  --border-light:       #EBECF0;
+  --border-focus:       #579DFF;
+
+  /* Typography — Atlassian scale */
+  --text-primary:       #172B4D;
+  --text-secondary:     #44546F;
+  --text-muted:         #626F86;
+  --text-subtle:        #8993A4;
+  --text-inverse:       #FFFFFF;
+
+  /* Accent — Jira Blue */
+  --accent:             #0C66E4;
+  --accent-hover:       #0055CC;
+  --accent-subtle:      #E9F2FF;
+  --accent-text:        #0C66E4;
+
+  /* Status colors */
+  --green:              #1F845A;
+  --green-bg:           #DCFFF1;
+  --red:                #CA3521;
+  --red-bg:             #FFECEB;
+  --yellow:             #946F00;
+  --yellow-bg:          #FFF7D6;
+
+  /* Canvas */
+  --dot-color:          #C1C7D0;
+  --shadow-sm:          0 1px 3px rgba(9,30,66,0.12), 0 0 1px rgba(9,30,66,0.08);
+  --shadow-md:          0 3px 8px rgba(9,30,66,0.16), 0 0 1px rgba(9,30,66,0.08);
+  --shadow-lg:          0 8px 24px rgba(9,30,66,0.2),  0 0 1px rgba(9,30,66,0.08);
 }
 
+[data-theme="dark"] {
+  /* Surface — Jira dark blue-gray palette */
+  --bg-app:             #1D2125;
+  --bg-canvas:          #161A1D;
+  --bg-panel:           #22272B;
+  --bg-panel-alt:       #282E33;
+  --bg-hover:           #2C333A;
+  --bg-active:          #1C2B41;
+  --bg-selected:        #1C3A6E;
+
+  /* Borders */
+  --border:             #3B4148;
+  --border-light:       #2C333A;
+  --border-focus:       #579DFF;
+
+  /* Typography */
+  --text-primary:       #C7D1DB;
+  --text-secondary:     #9FADBC;
+  --text-muted:         #738496;
+  --text-subtle:        #454F59;
+  --text-inverse:       #1D2125;
+
+  /* Accent — Jira blue in dark */
+  --accent:             #579DFF;
+  --accent-hover:       #85B8FF;
+  --accent-subtle:      #1C2B41;
+  --accent-text:        #85B8FF;
+
+  /* Status */
+  --green:              #7EE2B8;
+  --green-bg:           #1C3329;
+  --red:                #FD9891;
+  --red-bg:             #42221F;
+  --yellow:             #F5CD47;
+  --yellow-bg:          #332500;
+
+  /* Canvas */
+  --dot-color:          #2C333A;
+  --shadow-sm:          0 1px 3px rgba(0,0,0,0.4),  0 0 1px rgba(0,0,0,0.3);
+  --shadow-md:          0 3px 8px rgba(0,0,0,0.5),  0 0 1px rgba(0,0,0,0.3);
+  --shadow-lg:          0 8px 24px rgba(0,0,0,0.6), 0 0 1px rgba(0,0,0,0.3);
+}
+
+/* ── Base ────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -29,34 +97,47 @@
 html, body {
   height: 100%;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont,
+    'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
   color: var(--text-primary);
   background: var(--bg-app);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background 0.2s, color 0.2s;
 }
 
-button {
+button, input, textarea, select {
   font-family: inherit;
 }
 
 input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  opacity: 0.4;
-}
+input[type="number"]::-webkit-outer-spin-button { opacity: 0.5; }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+/* ── Transitions ─────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+/* Don't animate everything — only named props above */
+svg *, canvas { transition: none; }
+
+/* ── Animations ──────────────────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(8px); }
-  to   { opacity: 1; transform: translateX(0); }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* ── Scrollbar ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar            { width: 5px; height: 5px; }
+::-webkit-scrollbar-track      { background: transparent; }
+::-webkit-scrollbar-thumb      { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--text-subtle); }
