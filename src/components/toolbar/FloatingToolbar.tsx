@@ -1,6 +1,6 @@
 "use client";
 import React, { memo } from "react";
-import { MousePointer2, Hand, Square, Circle, ArrowRight, Minus, Pencil, Type } from "lucide-react";
+import { MousePointer2, Hand, Square, Circle, ArrowRight, Minus, Pencil, Type, Table2 } from "lucide-react";
 import { useToolStore } from "@/stores/toolStore";
 import { ToolType } from "@/types";
 
@@ -15,6 +15,7 @@ const TOOLS: ToolDef[] = [
   { id: "line",      icon: <Minus size={16} strokeWidth={1.8} />,         shortcut: "L", label: "Line" },
   { id: "freedraw",  icon: <Pencil size={16} strokeWidth={1.8} />,        shortcut: "P", label: "Pen" },
   { id: "text",      icon: <Type size={16} strokeWidth={1.8} />,          shortcut: "T", label: "Text" },
+  { id: "table",     icon: <Table2 size={16} strokeWidth={1.8} />,        shortcut: "G", label: "Table" },
 ];
 
 const FloatingToolbar = memo(function FloatingToolbar() {

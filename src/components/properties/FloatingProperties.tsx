@@ -4,8 +4,13 @@ import { BringToFront, SendToBack, ChevronUp, ChevronDown, AlignLeft, AlignCente
 import { useSelectionStore } from "@/stores/selectionStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useHistoryStore } from "@/stores/historyStore";
-import { Shape, TextShape } from "@/types";
+import { Shape, TextShape, TableShape } from "@/types";
 import { PanelSection, ColorSwatch, SliderRow, Separator, Label, Button, NumberInput } from "@/components/ui";
+import {
+  insertRow, deleteRow, insertCol, deleteCol,
+  distributeRowsEvenly, distributeColsEvenly,
+  tableUpdatePayload,
+} from "@/lib/tableUtils";
 
 const STROKE_COLORS = [
   "#000000", "#343a40", "#e03131", "#2f9e44",
@@ -83,6 +88,83 @@ const FloatingProperties = memo(function FloatingProperties() {
           format={(v) => `${Math.round(v * 100)}%`}
         />
       </div>
+
+      {shape.type === "table" && (() => {
+        const t = shape as TableShape;
+        const applyOp = (newTable: TableShape) => {
+          push(shapes);
+          updateShape(t.id, tableUpdatePayload(newTable) as Partial<Shape>);
+        };
+        return (
+          <>
+            <Separator />
+            <PanelSection title="Table">
+              {/* Stats */}
+              <div style={{
+                display: "flex", gap: "var(--ads-sp-100)",
+                marginBottom: "var(--ads-sp-100)",
+              }}>
+                <span style={{ fontSize: "var(--ads-font-size-xxs)", color: "var(--ads-text-subtle)" }}>
+                  {t.rows.length} rows
+                </span>
+                <span style={{ fontSize: "var(--ads-font-size-xxs)", color: "var(--ads-text-disabled)" }}>·</span>
+                <span style={{ fontSize: "var(--ads-font-size-xxs)", color: "var(--ads-text-subtle)" }}>
+                  {t.cols.length} cols
+                </span>
+              </div>
+
+              {/* Row actions */}
+              <Label style={{ marginBottom: "var(--ads-sp-050)" }}>Rows</Label>
+              <div style={{ display: "flex", gap: "var(--ads-sp-050)", marginBottom: "var(--ads-sp-075)" }}>
+                <Button variant="default" style={{ flex: 1, height: 26, padding: 0, fontSize: "var(--ads-font-size-xxs)", justifyContent: "center" }}
+                  onClick={() => applyOp(insertRow(t, t.rows.length - 1))}>
+                  + Below
+                </Button>
+                <Button variant="default" style={{ flex: 1, height: 26, padding: 0, fontSize: "var(--ads-font-size-xxs)", justifyContent: "center" }}
+                  onClick={() => applyOp(insertRow(t, -1))}>
+                  + Above
+                </Button>
+                <Button variant="default" style={{ flex: 1, height: 26, padding: 0, fontSize: "var(--ads-font-size-xxs)", justifyContent: "center" }}
+                  title={t.rows.length <= 1 ? "Need at least 1 row" : "Delete last row"}
+                  onClick={() => applyOp(deleteRow(t, t.rows.length - 1))}>
+                  − Last
+                </Button>
+              </div>
+
+              {/* Col actions */}
+              <Label style={{ marginBottom: "var(--ads-sp-050)" }}>Columns</Label>
+              <div style={{ display: "flex", gap: "var(--ads-sp-050)", marginBottom: "var(--ads-sp-075)" }}>
+                <Button variant="default" style={{ flex: 1, height: 26, padding: 0, fontSize: "var(--ads-font-size-xxs)", justifyContent: "center" }}
+                  onClick={() => applyOp(insertCol(t, t.cols.length - 1))}>
+                  + Right
+                </Button>
+                <Button variant="default" style={{ flex: 1, height: 26, padding: 0, fontSize: "var(--ads-font-size-xxs)", justifyContent: "center" }}
+                  onClick={() => applyOp(insertCol(t, -1))}>
+                  + Left
+                </Button>
+                <Button variant="default" style={{ flex: 1, height: 26, padding: 0, fontSize: "var(--ads-font-size-xxs)", justifyContent: "center" }}
+                  title={t.cols.length <= 1 ? "Need at least 1 column" : "Delete last column"}
+                  onClick={() => applyOp(deleteCol(t, t.cols.length - 1))}>
+                  − Last
+                </Button>
+              </div>
+
+              {/* Distribute */}
+              <Label style={{ marginBottom: "var(--ads-sp-050)" }}>Distribute</Label>
+              <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
+                <Button variant="subtle" style={{ flex: 1, height: 26, padding: 0, fontSize: "var(--ads-font-size-xxs)", justifyContent: "center" }}
+                  onClick={() => applyOp(distributeRowsEvenly(t))}>
+                  Rows evenly
+                </Button>
+                <Button variant="subtle" style={{ flex: 1, height: 26, padding: 0, fontSize: "var(--ads-font-size-xxs)", justifyContent: "center" }}
+                  onClick={() => applyOp(distributeColsEvenly(t))}>
+                  Cols evenly
+                </Button>
+              </div>
+            </PanelSection>
+          </>
+        );
+      })()}
 
       {shape.type === "text" && (
         <>

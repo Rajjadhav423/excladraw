@@ -63,6 +63,7 @@ export function useKeyboardShortcuts(
           t: "text",
           h: "hand",
           p: "freedraw",
+          g: "table",
         };
         if (toolMap[e.key.toLowerCase()]) {
           setTool(toolMap[e.key.toLowerCase()]);
