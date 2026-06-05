@@ -14,20 +14,14 @@ const FILL_COLORS = [
   "none",    "#ffffff", "#ffc9c9", "#b2f2bb",
   "#a5d8ff", "#ffec99", "#eebefa", "#ffa8a8",
 ];
-const BG_COLORS = [
-  "none",    "#1e1e1e", "#343a40", "#2b2b2b",
-  "#1a1a2e", "#1a2740", "#2d1b33", "#2b1a1a",
-];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 2 }}>
-      <div style={{
-        fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
-        textTransform: "uppercase", color: "var(--text-subtle)",
-        padding: "8px 12px 4px",
-      }}>{title}</div>
-      <div style={{ padding: "0 10px 8px" }}>{children}</div>
+    <div style={{ marginBottom: "var(--ads-sp-025)" }}>
+      <div className="ads-label" style={{ padding: "var(--ads-sp-100) var(--ads-sp-150) var(--ads-sp-050)" }}>
+        {title}
+      </div>
+      <div style={{ padding: "0 var(--ads-sp-100) var(--ads-sp-100)" }}>{children}</div>
     </div>
   );
 }
@@ -36,18 +30,27 @@ function ColorPicker({ colors, value, onChange }: {
   colors: string[]; value: string; onChange: (c: string) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: "var(--ads-sp-050)", flexWrap: "wrap" }}>
       {colors.map((c) => (
-        <button key={c} onClick={() => onChange(c)} title={c} style={{
-          width: 22, height: 22, borderRadius: 4, cursor: "pointer", flexShrink: 0,
-          border: value === c ? "2px solid var(--accent)" : "1.5px solid var(--border)",
-          background: c === "none"
-            ? `repeating-linear-gradient(45deg, var(--border) 0, var(--border) 1px, transparent 0, transparent 50%)`
-            : c,
-          backgroundSize: c === "none" ? "5px 5px" : undefined,
-          outline: value === c ? "2px solid var(--accent-subtle)" : "none",
-          outlineOffset: "1px",
-        }} />
+        <button
+          key={c}
+          onClick={() => onChange(c)}
+          title={c}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: "var(--ads-radius-sm)",
+            cursor: "pointer",
+            flexShrink: 0,
+            border: value === c ? "2px solid var(--ads-brand)" : "1.5px solid var(--ads-border)",
+            background: c === "none"
+              ? `repeating-linear-gradient(45deg, var(--ads-border) 0, var(--ads-border) 1px, transparent 0, transparent 50%)`
+              : c,
+            backgroundSize: c === "none" ? "5px 5px" : undefined,
+            outline: value === c ? "2px solid var(--ads-brand-subtle)" : "none",
+            outlineOffset: "1px",
+          }}
+        />
       ))}
     </div>
   );
@@ -58,13 +61,19 @@ function SliderRow({ label, min, max, step, value, onChange, format }: {
   value: number; onChange: (v: number) => void; format?: (v: number) => string;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-      <span style={{ fontSize: 11, color: "var(--text-muted)", width: 48, flexShrink: 0 }}>{label}</span>
-      <input type="range" min={min} max={max} step={step} value={value}
+    <div style={{ display: "flex", alignItems: "center", gap: "var(--ads-sp-100)", marginBottom: "var(--ads-sp-050)" }}>
+      <span style={{ fontSize: "var(--ads-font-size-xxs)", color: "var(--ads-text-subtle)", width: 48, flexShrink: 0 }}>{label}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        style={{ flex: 1, accentColor: "var(--accent)", height: 3, cursor: "pointer" }}
+        className="ads-range"
+        style={{ flex: 1 }}
       />
-      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", minWidth: 28, textAlign: "right" }}>
+      <span style={{ fontSize: "var(--ads-font-size-xxs)", fontWeight: "var(--ads-font-weight-bold)" as React.CSSProperties["fontWeight"], color: "var(--ads-text-secondary)", minWidth: 28, textAlign: "right" }}>
         {format ? format(value) : value}
       </span>
     </div>
@@ -90,11 +99,11 @@ const FloatingProperties = memo(function FloatingProperties() {
 
   return (
     <div style={{
-      width: 208,
-      background: "var(--bg-panel)",
-      border: "1px solid var(--border)",
-      borderRadius: 10,
-      boxShadow: "var(--shadow-lg)",
+      width: 212,
+      background: "var(--ads-surface-default)",
+      border: "1px solid var(--ads-border)",
+      borderRadius: "var(--ads-radius-lg)",
+      boxShadow: "var(--ads-shadow-overlay)",
       zIndex: 50,
       overflowY: "auto",
       maxHeight: "calc(100vh - 120px)",
@@ -102,10 +111,11 @@ const FloatingProperties = memo(function FloatingProperties() {
     }}>
       {/* Shape type label */}
       <div style={{
-        padding: "9px 12px 8px",
-        borderBottom: "1px solid var(--border)",
-        fontSize: 12, fontWeight: 700,
-        color: "var(--text-secondary)",
+        padding: "var(--ads-sp-100) var(--ads-sp-150) var(--ads-sp-075)",
+        borderBottom: "1px solid var(--ads-border)",
+        fontSize: "var(--ads-font-size-xs)",
+        fontWeight: "var(--ads-font-weight-semibold)" as React.CSSProperties["fontWeight"],
+        color: "var(--ads-text-secondary)",
         textTransform: "capitalize",
         letterSpacing: "0.01em",
       }}>
@@ -126,10 +136,10 @@ const FloatingProperties = memo(function FloatingProperties() {
         </Section>
       )}
 
-      <div style={{ height: 1, background: "var(--border)", margin: "0" }} />
+      <div style={{ height: 1, background: "var(--ads-border)" }} />
 
       {/* Sliders */}
-      <div style={{ padding: "8px 10px" }}>
+      <div style={{ padding: "var(--ads-sp-100) var(--ads-sp-100)" }}>
         <SliderRow label="Stroke W." min={0.5} max={12} step={0.5}
           value={shape.strokeWidth}
           onChange={(v) => update("strokeWidth", v)}
@@ -144,29 +154,43 @@ const FloatingProperties = memo(function FloatingProperties() {
       {/* Text options */}
       {shape.type === "text" && (
         <>
-          <div style={{ height: 1, background: "var(--border)" }} />
+          <div style={{ height: 1, background: "var(--ads-border)" }} />
           <Section title="Text">
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <span style={{ fontSize: 11, color: "var(--text-muted)", width: 48 }}>Size</span>
-              <input type="number" min={8} max={96}
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--ads-sp-075)", marginBottom: "var(--ads-sp-075)" }}>
+              <span style={{ fontSize: "var(--ads-font-size-xxs)", color: "var(--ads-text-subtle)", width: 48 }}>Size</span>
+              <input
+                type="number"
+                min={8}
+                max={96}
                 value={(shape as TextShape).fontSize}
                 onChange={(e) => update("fontSize" as keyof Shape, parseInt(e.target.value))}
-                style={{ flex: 1, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--bg-panel-alt)", color: "var(--text-primary)", fontSize: 12, outline: "none", fontFamily: "inherit" }}
+                className="ads-input"
+                style={{ height: 28, fontSize: "var(--ads-font-size-xs)" }}
               />
             </div>
-            <div style={{ display: "flex", gap: 4 }}>
+            <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
               {(["left", "center", "right"] as const).map((a) => {
                 const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
                 const active = (shape as TextShape).textAlign === a;
                 return (
-                  <button key={a} onClick={() => update("textAlign" as keyof Shape, a)} style={{
-                    flex: 1, height: 26, borderRadius: 4,
-                    border: active ? "1px solid var(--accent)" : "1px solid var(--border)",
-                    background: active ? "var(--accent-subtle)" : "var(--bg-panel-alt)",
-                    color: active ? "var(--accent)" : "var(--text-muted)",
-                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <Icon size={13} />
+                  <button
+                    key={a}
+                    onClick={() => update("textAlign" as keyof Shape, a)}
+                    style={{
+                      flex: 1,
+                      height: 28,
+                      borderRadius: "var(--ads-radius-sm)",
+                      border: active ? "1px solid var(--ads-brand)" : "1px solid var(--ads-border)",
+                      background: active ? "var(--ads-surface-selected)" : "var(--ads-surface-sunken)",
+                      color: active ? "var(--ads-brand)" : "var(--ads-text-subtle)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "background var(--ads-transition-fast), border-color var(--ads-transition-fast)",
+                    }}
+                  >
+                    <Icon size={13} strokeWidth={1.8} />
                   </button>
                 );
               })}
@@ -175,28 +199,32 @@ const FloatingProperties = memo(function FloatingProperties() {
         </>
       )}
 
-      <div style={{ height: 1, background: "var(--border)" }} />
+      <div style={{ height: 1, background: "var(--ads-border)" }} />
 
-      {/* Layer */}
-      <div style={{ padding: "8px 10px" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--text-subtle)", marginBottom: 6 }}>Layers</div>
-        <div style={{ display: "flex", gap: 4 }}>
+      {/* Layer controls */}
+      <div style={{ padding: "var(--ads-sp-100) var(--ads-sp-100)" }}>
+        <div className="ads-label" style={{ marginBottom: "var(--ads-sp-075)" }}>Layers</div>
+        <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
           {[
-            { icon: <SendToBack size={13} />,   label: "Back",     fn: () => sendToBack(shape.id) },
-            { icon: <ChevronDown size={13} />,  label: "−",        fn: () => sendBackward(shape.id) },
-            { icon: <ChevronUp size={13} />,    label: "+",        fn: () => bringForward(shape.id) },
-            { icon: <BringToFront size={13} />, label: "Front",    fn: () => bringToFront(shape.id) },
+            { icon: <SendToBack size={13} strokeWidth={1.8} />,   label: "Back",  fn: () => sendToBack(shape.id) },
+            { icon: <ChevronDown size={13} strokeWidth={1.8} />,  label: "−",     fn: () => sendBackward(shape.id) },
+            { icon: <ChevronUp size={13} strokeWidth={1.8} />,    label: "+",     fn: () => bringForward(shape.id) },
+            { icon: <BringToFront size={13} strokeWidth={1.8} />, label: "Front", fn: () => bringToFront(shape.id) },
           ].map(({ icon, label, fn }) => (
-            <button key={label} onClick={fn} title={label} style={{
-              flex: 1, height: 26, borderRadius: 4,
-              border: "1px solid var(--border)",
-              background: "var(--bg-panel-alt)",
-              cursor: "pointer", fontSize: 11, fontWeight: 600,
-              color: "var(--text-secondary)",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 2,
-            }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-panel-alt)")}
+            <button
+              key={label}
+              onClick={fn}
+              title={label}
+              className="ads-btn ads-btn-default"
+              style={{
+                flex: 1,
+                height: 28,
+                padding: 0,
+                borderRadius: "var(--ads-radius-sm)",
+                fontSize: "var(--ads-font-size-xxs)",
+                fontWeight: "var(--ads-font-weight-semibold)" as React.CSSProperties["fontWeight"],
+                justifyContent: "center",
+              }}
             >
               {icon}
             </button>
