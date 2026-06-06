@@ -173,9 +173,9 @@ export function ColorPicker({
           <div style={{ marginTop: "var(--ads-sp-050)" }}>
             {shades.length > 0 ? (
               <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
-                {shades.map((s) => (
+                {shades.map((s, index) => (
                   <button
-                    key={s} title={s}
+                    key={`${s}-${index}`} title={s}
                     onClick={() => commit(s)}
                     style={{
                       flex: 1,
