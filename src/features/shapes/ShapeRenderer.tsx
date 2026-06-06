@@ -1,11 +1,15 @@
 "use client";
 import React, { memo } from "react";
-import { Shape, StrokeStyle } from "@/types";
+import { Shape, StrokeStyle, TableShape } from "@/types";
+import TableRenderer from "./TableRenderer";
 
 interface Props {
   shape: Shape;
   isSelected: boolean;
   isEditing?: boolean;
+  editingCell?: { rowId: string; colId: string } | null;
+  onCellDoubleClick?: (rowId: string, colId: string) => void;
+  onDividerMouseDown?: (e: React.MouseEvent, type: "row" | "col", index: number) => void;
   onClick: (e: React.MouseEvent) => void;
   onMouseDown: (e: React.MouseEvent) => void;
 }
@@ -43,7 +47,14 @@ function HatchPattern({ id, color }: { id: string; color: string }) {
 const SEL_STROKE = "var(--selection-stroke, #2563EB)";
 
 const ShapeRenderer = memo(function ShapeRenderer({
-  shape, isSelected, isEditing = false, onClick, onMouseDown,
+  shape,
+  isSelected,
+  isEditing = false,
+  editingCell = null,
+  onCellDoubleClick,
+  onDividerMouseDown,
+  onClick,
+  onMouseDown,
 }: Props) {
   const sw     = isSelected ? Math.max(shape.strokeWidth, 2) : shape.strokeWidth;
   const stroke = isSelected ? SEL_STROKE : shape.stroke;
@@ -171,6 +182,20 @@ const ShapeRenderer = memo(function ShapeRenderer({
         strokeLinecap="round"
         strokeLinejoin="round"
         style={{ opacity: shape.opacity, cursor: "move" }}
+      />
+    );
+  }
+
+  if (shape.type === "table") {
+    return (
+      <TableRenderer
+        shape={shape as TableShape}
+        isSelected={isSelected}
+        editingCell={editingCell}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        onCellDoubleClick={onCellDoubleClick ?? (() => {})}
+        onDividerMouseDown={onDividerMouseDown ?? (() => {})}
       />
     );
   }

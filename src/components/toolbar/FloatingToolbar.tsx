@@ -3,7 +3,7 @@ import React, { memo, useState, useRef, useEffect } from "react";
 import {
   MousePointer2, Hand, Square, Circle, ArrowRight,
   Minus, Pencil, Type, Eraser, Lock, MoreHorizontal,
-  Frame, Globe, Zap, Lasso,
+  Frame, Globe, Zap, Lasso, Table2,
 } from "lucide-react";
 import { useToolStore } from "@/stores/toolStore";
 import { ToolType } from "@/types";
@@ -29,6 +29,7 @@ const TOOL_GROUPS: ToolDef[][] = [
     { id: "line",      icon: <Minus        size={15} strokeWidth={1.8} />, shortcut: "L", label: "Line" },
     { id: "freedraw",  icon: <Pencil       size={15} strokeWidth={1.8} />, shortcut: "P", label: "Pen" },
     { id: "text",      icon: <Type         size={15} strokeWidth={1.8} />, shortcut: "T", label: "Text" },
+    { id: "table",     icon: <Table2       size={15} strokeWidth={1.8} />, shortcut: "G", label: "Table" },
   ],
   [
     { id: "eraser",    icon: <Eraser       size={15} strokeWidth={1.8} />, shortcut: "E", label: "Eraser" },

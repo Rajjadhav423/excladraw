@@ -6,6 +6,7 @@ export type ToolType =
   | "line"
   | "text"
   | "freedraw"
+  | "table"
   | "hand"
   | "eraser";
 
@@ -15,7 +16,8 @@ export type ShapeType =
   | "arrow"
   | "line"
   | "text"
-  | "freedraw";
+  | "freedraw"
+  | "table";
 
 export type StrokeStyle = "solid" | "dashed" | "dotted";
 export type FillStyle  = "none" | "hatch" | "solid";
@@ -82,13 +84,46 @@ export interface FreeDrawShape extends BaseShape {
   points: Point[];
 }
 
+/** One row descriptor — owns its own height so rows resize independently */
+export interface TableRow {
+  id: string;
+  height: number;
+}
+
+/** One column descriptor — owns its own width so columns resize independently */
+export interface TableCol {
+  id: string;
+  width: number;
+}
+
+/**
+ * Flat cell record keyed by (rowId, colId).
+ * Keeping cells flat (not nested) makes insert/delete ops O(n) without rebuilding matrices.
+ * Future: add colspan, rowspan, styleOverrides here.
+ */
+export interface TableCell {
+  rowId: string;
+  colId: string;
+  text: string;
+}
+
+export interface TableShape extends BaseShape {
+  type: "table";
+  rows: TableRow[];
+  cols: TableCol[];
+  cells: TableCell[];
+  /** Index of the header row (-1 = no header). Default 0. */
+  headerRow: number;
+}
+
 export type Shape =
   | RectangleShape
   | EllipseShape
   | ArrowShape
   | LineShape
   | TextShape
-  | FreeDrawShape;
+  | FreeDrawShape
+  | TableShape;
 
 export interface Viewport {
   x: number;

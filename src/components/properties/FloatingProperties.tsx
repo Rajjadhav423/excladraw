@@ -1,202 +1,30 @@
-"use client";
-import React, { memo, useCallback, useRef, useState } from "react";
+﻿"use client";
+import React, { memo, useCallback } from "react";
 import {
   BringToFront, SendToBack, ChevronUp, ChevronDown,
-  AlignLeft, AlignCenter, AlignRight, Copy, Trash2, Group, Link,
+  AlignLeft, AlignCenter, AlignRight, Copy, Trash2,
 } from "lucide-react";
 import { useSelectionStore } from "@/stores/selectionStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useHistoryStore } from "@/stores/historyStore";
-import { Shape, TextShape, StrokeStyle, FillStyle, EdgeStyle } from "@/types";
-import { NumberInput } from "@/components/ui";
-import { ColorPicker } from "@/components/ui";
-import {
-  PanelHeader,
-  PropertySection,
-  SectionDivider,
-  PropertyButtonGroup,
-  PropertySlider,
-} from "./primitives";
+import { Shape, TextShape } from "@/types";
+import { PanelSection, ColorSwatch, SliderRow, Separator, NumberInput } from "@/components/ui";
 
-/* ─── Shape display names ────────────────────────────────────────────────── */
+const STROKE_COLORS = [
+  "#172B4D", "#e03131", "#2f9e44", "#1971c2",
+  "#f08c00", "#ae3ec9", "#c2255c", "#ffffff",
+];
+const FILL_COLORS = [
+  "none", "#ffffff", "#ffc9c9", "#b2f2bb",
+  "#a5d8ff", "#ffec99", "#eebefa", "#f1f3f5",
+];
+
 const SHAPE_LABELS: Record<string, string> = {
-  rectangle: "Rectangle",
-  ellipse:   "Ellipse",
-  arrow:     "Arrow",
-  line:      "Line",
-  text:      "Text",
-  freedraw:  "Pen",
+  rectangle: "Rectangle", ellipse: "Ellipse",
+  arrow: "Arrow", line: "Line",
+  text: "Text", freedraw: "Pen", table: "Table",
 };
 
-/* ─── Stroke-width preset values ─────────────────────────────────────────── */
-const SW_PRESETS = [1, 2, 4];
-
-/* ─── SVG icons for visual controls ─────────────────────────────────────── */
-const StrokeSolidIcon  = () => (
-  <svg width="24" height="6" aria-hidden>
-    <line x1="2" y1="3" x2="22" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
-const StrokeDashedIcon = () => (
-  <svg width="24" height="6" aria-hidden>
-    <line x1="2" y1="3" x2="22" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="5 3"/>
-  </svg>
-);
-const StrokeDottedIcon = () => (
-  <svg width="24" height="6" aria-hidden>
-    <line x1="2" y1="3" x2="22" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="1.5 4"/>
-  </svg>
-);
-const StrokeWidthThinIcon   = () => <svg width="24" height="12" aria-hidden><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
-const StrokeWidthMediumIcon = () => <svg width="24" height="12" aria-hidden><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="3"   strokeLinecap="round"/></svg>;
-const StrokeWidthThickIcon  = () => <svg width="24" height="12" aria-hidden><line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="5"   strokeLinecap="round"/></svg>;
-const FillNoneIcon  = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-    <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-    <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" strokeWidth="1"/>
-  </svg>
-);
-const FillHatchIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-    <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-    <line x1="5" y1="2" x2="2" y2="5"  stroke="currentColor" strokeWidth="1"/>
-    <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="1"/>
-    <line x1="15" y1="2" x2="2" y2="15" stroke="currentColor" strokeWidth="1"/>
-    <line x1="15" y1="7" x2="7" y2="15" stroke="currentColor" strokeWidth="1"/>
-    <line x1="15" y1="12" x2="12" y2="15" stroke="currentColor" strokeWidth="1"/>
-  </svg>
-);
-const FillSolidIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-    <rect x="2" y="2" width="12" height="12" rx="2" fill="currentColor" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>
-  </svg>
-);
-const EdgeSharpIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-    <rect x="2" y="2" width="12" height="12" rx="0" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-  </svg>
-);
-const EdgeRoundIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-    <rect x="2" y="2" width="12" height="12" rx="4" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-  </svg>
-);
-
-/* ─── Colour swatch trigger ──────────────────────────────────────────────── */
-function ColorSwatch({ value }: { value: string }) {
-  const isNone = !value || value === "none";
-  return (
-    <div
-      title={isNone ? "None" : value}
-      style={{
-        width: "var(--ads-height-sm)",
-        height: "var(--ads-height-sm)",
-        borderRadius: "var(--ads-radius-sm)",
-        border: "1.5px solid var(--ads-border-input)",
-        background: isNone ? "transparent" : value,
-        cursor: "pointer",
-        position: "relative",
-        flexShrink: 0,
-        padding: 0,
-      }}
-    >
-      {isNone && (
-        <svg
-          viewBox="0 0 24 24"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", borderRadius: "var(--ads-radius-sm)" }}
-        >
-          <line x1="3" y1="21" x2="21" y2="3" stroke="var(--ads-danger)" strokeWidth="1.5"/>
-        </svg>
-      )}
-    </div>
-  );
-}
-
-/* ─── Color field row: swatch + picker + hex label ───────────────────────── */
-function ColorField({
-  value, onChange, panelRef,
-}: {
-  value?: string;
-  onChange: (c: string) => void;
-  panelRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const { recentColors, addRecentColor } = useCanvasStore();
-  const display = value ?? "none";
-  const [open, setOpen] = useState(false);
-  const swatchRef = useRef<HTMLButtonElement>(null);
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "var(--ads-sp-100)" }}>
-      <button
-        ref={swatchRef}
-        onClick={() => setOpen((v) => !v)}
-        style={{ padding: 0, border: "none", background: "none", cursor: "pointer", lineHeight: 0 }}
-      >
-        <ColorSwatch value={display} />
-      </button>
-      <ColorPicker
-        anchorRef={panelRef as React.RefObject<HTMLElement | null>}
-        caretAnchorRef={swatchRef as React.RefObject<HTMLElement | null>}
-        open={open}
-        onOpenChange={setOpen}
-        value={display}
-        onChange={onChange}
-        recentColors={recentColors}
-        onAddRecent={addRecentColor}
-      />
-      <span style={{
-        fontSize: "var(--ads-font-size-xs)",
-        fontWeight: "var(--ads-font-weight-medium)",
-        color: "var(--ads-text-secondary)",
-        fontFamily: "var(--ads-font-family-mono)",
-        letterSpacing: "0.04em",
-        lineHeight: "var(--ads-line-height-xs)",
-      }}>
-        {display === "none" ? "None" : display.toUpperCase()}
-      </span>
-    </div>
-  );
-}
-
-/* ─── Action button row (bottom of panel) ────────────────────────────────── */
-function ActionRow({ icon, label, onClick, danger }: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      title={label}
-      onClick={onClick}
-      style={{
-        flex: 1,
-        height: "var(--ads-height-md)",
-        borderRadius: "var(--ads-radius-sm)",
-        border: "1px solid var(--ads-border)",
-        background: "var(--ads-surface-sunken)",
-        color: danger ? "var(--ads-text-danger)" : "var(--ads-icon-subtle)",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "background var(--ads-transition-fast), color var(--ads-transition-fast)",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = danger
-          ? "var(--ads-surface-danger)"
-          : "var(--ads-surface-hovered)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = "var(--ads-surface-sunken)";
-      }}
-    >
-      {icon}
-    </button>
-  );
-}
-
-/* ─── Main Panel ─────────────────────────────────────────────────────────── */
 const FloatingProperties = memo(function FloatingProperties() {
   const { selectedIds } = useSelectionStore();
   const {
@@ -204,19 +32,16 @@ const FloatingProperties = memo(function FloatingProperties() {
     bringForward, sendBackward, bringToFront, sendToBack,
   } = useCanvasStore();
   const { push } = useHistoryStore();
-  const panelRef = useRef<HTMLDivElement>(null);
 
   const sel   = shapes.filter((s) => selectedIds.has(s.id));
   const count = sel.length;
   const shape = count === 1 ? sel[0] : null;
 
-  /* Batch update all selected shapes */
   const updateAll = useCallback((field: keyof Shape, val: unknown) => {
     push(shapes);
     sel.forEach((s) => updateShape(s.id, { [field]: val } as Partial<Shape>));
   }, [sel, shapes, push, updateShape]);
 
-  /* Single-shape update */
   const update = useCallback((field: keyof Shape, val: unknown) => {
     if (!shape) return;
     push(shapes);
@@ -225,35 +50,23 @@ const FloatingProperties = memo(function FloatingProperties() {
 
   if (count === 0) return null;
 
-  /* Derive common values across selection */
-  const cv = <K extends keyof Shape>(key: K) =>
+  const cv = <K extends keyof Shape>(key: K): Shape[K] | undefined =>
     sel.every((s) => s[key] === sel[0][key]) ? sel[0][key] as Shape[K] : undefined;
 
-  const commonStroke      = cv("stroke");
-  const commonFill        = cv("fill");
-  const commonFillStyle   = cv("fillStyle")   as FillStyle | undefined;
-  const commonStrokeStyle = cv("strokeStyle") as StrokeStyle | undefined;
-  const commonStrokeWidth = cv("strokeWidth") as number | undefined;
-  const commonOpacity     = cv("opacity")     as number | undefined;
-  const commonRoundness   = cv("roundness")   as EdgeStyle | undefined;
+  const commonStroke = cv("stroke") as string | undefined;
+  const commonFill   = cv("fill")   as string | undefined;
+  const commonSW     = cv("strokeWidth") as number | undefined;
+  const commonOp     = cv("opacity")     as number | undefined;
 
-  const hasNoFill  = sel.every((s) => ["arrow", "line", "freedraw"].includes(s.type));
-  const isText     = shape?.type === "text";
-  const isRect     = shape && ["rectangle", "ellipse"].includes(shape.type);
-  const isLocked   = shape?.locked ?? false;
-
+  const hasNoFill = sel.every((s) => ["arrow", "line", "freedraw"].includes(s.type));
+  const isText    = shape?.type === "text";
   const panelTitle = count === 1
     ? (SHAPE_LABELS[shape!.type] ?? shape!.type)
     : `${count} objects`;
 
-  /* Stroke width: map numeric value to preset key */
-  const swPreset = commonStrokeWidth !== undefined
-    ? SW_PRESETS.includes(commonStrokeWidth) ? String(commonStrokeWidth) : undefined
-    : undefined;
-
   return (
-    <div ref={panelRef} style={{
-      width: 220,
+    <div style={{
+      width: 216,
       background: "var(--ads-surface-default)",
       border: "1px solid var(--ads-border)",
       borderRadius: "var(--ads-radius-lg)",
@@ -261,202 +74,116 @@ const FloatingProperties = memo(function FloatingProperties() {
       overflowY: "auto",
       maxHeight: "calc(100vh - 140px)",
       scrollbarWidth: "thin",
-      display: "flex",
-      flexDirection: "column",
+      animation: "slideInLeft 0.15s ease",
     }}>
 
-      {/* ── 1. Sticky header ────────────────────────────────────────────── */}
-      <PanelHeader
-        title={panelTitle}
-        isLocked={isLocked}
-        onLock={() => update("locked" as keyof Shape, !isLocked)}
-        onDuplicate={() => { push(shapes); duplicateShapes([...selectedIds]); }}
-        onDelete={() => { push(shapes); deleteShapes([...selectedIds]); }}
-      />
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 12px",
+        borderBottom: "1px solid var(--ads-border)",
+      }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ads-text-secondary)", textTransform: "capitalize" }}>
+          {panelTitle}
+        </span>
+        <div style={{ display: "flex", gap: 4 }}>
+          {[
+            { title: "Duplicate (Ctrl+D)", icon: <Copy size={13} strokeWidth={1.8} />, fn: () => { push(shapes); duplicateShapes([...selectedIds]); }, danger: false },
+            { title: "Delete (Del)", icon: <Trash2 size={13} strokeWidth={1.8} />, fn: () => { push(shapes); deleteShapes([...selectedIds]); }, danger: true },
+          ].map(({ title, icon, fn, danger }) => (
+            <button key={title} title={title} onClick={fn} style={{
+              width: 24, height: 24, border: "none", borderRadius: 4,
+              background: "transparent", cursor: "pointer",
+              color: "var(--ads-icon-subtle)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = danger ? "var(--ads-surface-danger, #FFECEB)" : "var(--ads-surface-hovered)";
+                if (danger) e.currentTarget.style.color = "var(--ads-text-danger, #CA3521)";
+              }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--ads-icon-subtle)"; }}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* ── 2. Stroke colour ─────────────────────────────────────────────── */}
-      <PropertySection title="Stroke">
-        <ColorField
-          value={commonStroke as string | undefined}
-          onChange={(c) => updateAll("stroke", c)}
-          panelRef={panelRef}
-        />
-      </PropertySection>
+      <PanelSection title="Stroke">
+        <ColorSwatch colors={STROKE_COLORS} value={commonStroke ?? sel[0].stroke} onChange={(c) => updateAll("stroke", c)} />
+      </PanelSection>
 
-      {/* ── 3. Background colour ─────────────────────────────────────────── */}
       {!hasNoFill && (
-        <PropertySection title="Background">
-          <ColorField
-            value={commonFill as string | undefined}
-            onChange={(c) => updateAll("fill", c)}
-            panelRef={panelRef}
-          />
-        </PropertySection>
+        <PanelSection title="Fill">
+          <ColorSwatch colors={FILL_COLORS} value={commonFill ?? sel[0].fill} onChange={(c) => updateAll("fill", c)} />
+        </PanelSection>
       )}
 
-      <SectionDivider />
+      <Separator />
 
-      {/* ── 4. Fill style ────────────────────────────────────────────────── */}
-      {!hasNoFill && (
-        <PropertySection title="Fill">
-          <PropertyButtonGroup<FillStyle>
-            value={commonFillStyle}
-            onChange={(v) => updateAll("fillStyle", v)}
-            options={[
-              { value: "none",  title: "No fill",   label: <FillNoneIcon /> },
-              { value: "hatch", title: "Hatch fill", label: <FillHatchIcon /> },
-              { value: "solid", title: "Solid fill", label: <FillSolidIcon /> },
-            ]}
-          />
-        </PropertySection>
-      )}
-
-      {/* ── 5. Stroke width ──────────────────────────────────────────────── */}
-      <PropertySection title="Stroke width">
-        <PropertyButtonGroup<string>
-          value={swPreset}
-          onChange={(v) => updateAll("strokeWidth", parseInt(v))}
-          options={[
-            { value: "1", title: "Thin",   label: <StrokeWidthThinIcon /> },
-            { value: "2", title: "Medium", label: <StrokeWidthMediumIcon /> },
-            { value: "4", title: "Thick",  label: <StrokeWidthThickIcon /> },
-          ]}
+      <div style={{ padding: "8px" }}>
+        <SliderRow label="Stroke W." min={0.5} max={12} step={0.5}
+          value={commonSW ?? sel[0].strokeWidth}
+          onChange={(v) => updateAll("strokeWidth", v)}
         />
-      </PropertySection>
-
-      {/* ── 6. Stroke style ──────────────────────────────────────────────── */}
-      <PropertySection title="Stroke style">
-        <PropertyButtonGroup<StrokeStyle>
-          value={commonStrokeStyle}
-          onChange={(v) => updateAll("strokeStyle", v)}
-          options={[
-            { value: "solid",  title: "Solid",  label: <StrokeSolidIcon /> },
-            { value: "dashed", title: "Dashed", label: <StrokeDashedIcon /> },
-            { value: "dotted", title: "Dotted", label: <StrokeDottedIcon /> },
-          ]}
+        <SliderRow label="Opacity" min={0} max={1} step={0.05}
+          value={commonOp ?? sel[0].opacity}
+          onChange={(v) => updateAll("opacity", v)}
+          format={(v) => `${Math.round(v * 100)}%`}
         />
-      </PropertySection>
+      </div>
 
-      {/* ── 7. Edges (rect / ellipse only) ───────────────────────────────── */}
-      {isRect && (
-        <PropertySection title="Edges">
-          <PropertyButtonGroup<EdgeStyle>
-            value={commonRoundness}
-            onChange={(v) => updateAll("roundness", v)}
-            options={[
-              { value: "sharp", title: "Sharp corners",   label: <EdgeSharpIcon /> },
-              { value: "round", title: "Rounded corners", label: <EdgeRoundIcon /> },
-            ]}
-          />
-        </PropertySection>
-      )}
-
-      <SectionDivider />
-
-      {/* ── 8. Opacity ───────────────────────────────────────────────────── */}
-      <PropertySection title="Opacity">
-        <PropertySlider
-          min={0} max={100} step={1}
-          value={Math.round((commonOpacity ?? sel[0].opacity) * 100)}
-          onChange={(v) => updateAll("opacity", v / 100)}
-          format={(v) => `${v}`}
-        />
-      </PropertySection>
-
-      {/* ── 9. Text settings (text shapes) ───────────────────────────────── */}
-      {isText && (
+      {isText && shape && (
         <>
-          <SectionDivider />
-          <PropertySection title="Text">
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--ads-sp-100)" }}>
-              {/* Font size */}
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--ads-sp-100)" }}>
-                <span style={{
-                  fontSize: "var(--ads-font-size-xxs)",
-                  fontWeight: "var(--ads-font-weight-semibold)",
-                  color: "var(--ads-text-subtle)",
-                  flexShrink: 0,
-                  width: "var(--ads-sp-400)",
-                  lineHeight: "var(--ads-line-height-xxs)",
-                }}>
-                  Size
-                </span>
-                <NumberInput
-                  min={8} max={96}
-                  value={(shape as TextShape).fontSize}
-                  onChange={(v) => update("fontSize" as keyof Shape, v)}
-                  style={{ flex: 1 }}
-                />
-              </div>
-              {/* Alignment */}
-              <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
-                {(["left", "center", "right"] as const).map((a) => {
-                  const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
-                  const active = (shape as TextShape).textAlign === a;
-                  return (
-                    <button
-                      key={a}
-                      title={`Align ${a}`}
-                      onClick={() => update("textAlign" as keyof Shape, a)}
-                      style={{
-                        flex: 1,
-                        height: "var(--ads-height-md)",
-                        borderRadius: "var(--ads-radius-sm)",
-                        border: active
-                          ? "1.5px solid var(--ads-border-selected)"
-                          : "1px solid var(--ads-border)",
-                        background: active
-                          ? "var(--ads-surface-selected)"
-                          : "var(--ads-surface-sunken)",
-                        color: active
-                          ? "var(--ads-icon-selected)"
-                          : "var(--ads-icon-subtle)",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        transition: "background var(--ads-transition-fast), border-color var(--ads-transition-fast)",
-                      }}
-                    >
-                      <Icon size={13} strokeWidth={1.8} />
-                    </button>
-                  );
-                })}
-              </div>
+          <Separator />
+          <PanelSection title="Text">
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 11, color: "var(--ads-text-subtle)", width: 32, flexShrink: 0 }}>Size</span>
+              <NumberInput min={8} max={96} value={(shape as TextShape).fontSize}
+                onChange={(v) => update("fontSize" as keyof Shape, v)} style={{ flex: 1 }} />
             </div>
-          </PropertySection>
+            <div style={{ display: "flex", gap: 4 }}>
+              {(["left", "center", "right"] as const).map((a) => {
+                const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
+                const active = (shape as TextShape).textAlign === a;
+                return (
+                  <button key={a} title={`Align ${a}`} onClick={() => update("textAlign" as keyof Shape, a)} style={{
+                    flex: 1, height: 28,
+                    borderRadius: "var(--ads-radius-sm)",
+                    border: active ? "1.5px solid var(--ads-brand)" : "1px solid var(--ads-border)",
+                    background: active ? "var(--ads-surface-selected)" : "var(--ads-surface-sunken)",
+                    color: active ? "var(--ads-brand)" : "var(--ads-icon-subtle)",
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Icon size={13} strokeWidth={1.8} />
+                  </button>
+                );
+              })}
+            </div>
+          </PanelSection>
         </>
       )}
 
-      <SectionDivider />
+      <Separator />
 
-      {/* ── 10. Layers ───────────────────────────────────────────────────── */}
       {shape && (
-        <PropertySection title="Layers">
-          <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
+        <div style={{ padding: "8px" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ads-text-subtle)", marginBottom: 6 }}>Layers</div>
+          <div style={{ display: "flex", gap: 4 }}>
             {[
-              { icon: <SendToBack   size={13} strokeWidth={1.8} />, label: "Send to back",   fn: () => sendToBack(shape.id) },
-              { icon: <ChevronDown  size={13} strokeWidth={1.8} />, label: "Send backward",  fn: () => sendBackward(shape.id) },
-              { icon: <ChevronUp    size={13} strokeWidth={1.8} />, label: "Bring forward",  fn: () => bringForward(shape.id) },
-              { icon: <BringToFront size={13} strokeWidth={1.8} />, label: "Bring to front", fn: () => bringToFront(shape.id) },
-            ].map(({ icon, label, fn }) => (
-              <button
-                key={label}
-                title={label}
-                onClick={fn}
-                style={{
-                  flex: 1,
-                  height: "var(--ads-height-md)",
-                  borderRadius: "var(--ads-radius-sm)",
-                  border: "1px solid var(--ads-border)",
-                  background: "var(--ads-surface-sunken)",
-                  color: "var(--ads-icon-subtle)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "background var(--ads-transition-fast)",
-                }}
+              { fn: () => sendToBack(shape.id),   title: "Send to back",   icon: <SendToBack   size={13} strokeWidth={1.8} /> },
+              { fn: () => sendBackward(shape.id), title: "Send backward",  icon: <ChevronDown  size={13} strokeWidth={1.8} /> },
+              { fn: () => bringForward(shape.id), title: "Bring forward",  icon: <ChevronUp    size={13} strokeWidth={1.8} /> },
+              { fn: () => bringToFront(shape.id), title: "Bring to front", icon: <BringToFront size={13} strokeWidth={1.8} /> },
+            ].map(({ fn, title, icon }) => (
+              <button key={title} title={title} onClick={fn} style={{
+                flex: 1, height: 28,
+                borderRadius: "var(--ads-radius-sm)",
+                border: "1px solid var(--ads-border)",
+                background: "var(--ads-surface-sunken)",
+                color: "var(--ads-icon-subtle)",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "background var(--ads-transition-fast)",
+              }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "var(--ads-surface-hovered)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "var(--ads-surface-sunken)")}
               >
@@ -464,37 +191,8 @@ const FloatingProperties = memo(function FloatingProperties() {
               </button>
             ))}
           </div>
-        </PropertySection>
-      )}
-
-      <SectionDivider />
-
-      {/* ── 11. Actions ──────────────────────────────────────────────────── */}
-      <PropertySection title="Actions">
-        <div style={{ display: "flex", gap: "var(--ads-sp-050)" }}>
-          <ActionRow
-            icon={<Copy   size={13} strokeWidth={1.8} />}
-            label="Duplicate  Ctrl+D"
-            onClick={() => { push(shapes); duplicateShapes([...selectedIds]); }}
-          />
-          <ActionRow
-            icon={<Group  size={13} strokeWidth={1.8} />}
-            label="Group  Ctrl+G"
-            onClick={() => {}}
-          />
-          <ActionRow
-            icon={<Link   size={13} strokeWidth={1.8} />}
-            label="Add link"
-            onClick={() => {}}
-          />
-          <ActionRow
-            icon={<Trash2 size={13} strokeWidth={1.8} />}
-            label="Delete  Del"
-            danger
-            onClick={() => { push(shapes); deleteShapes([...selectedIds]); }}
-          />
         </div>
-      </PropertySection>
+      )}
 
     </div>
   );

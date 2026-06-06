@@ -15,7 +15,7 @@ import { useCanvasEvents } from "@/hooks/useCanvasEvents";
 import ShapeRenderer from "@/features/shapes/ShapeRenderer";
 import SelectionHandles from "@/features/shapes/SelectionHandles";
 import { canvasToScreen } from "@/lib/geometry";
-import { TextShape } from "@/types";
+import { TextShape, TableShape } from "@/types";
 
 interface Props {
   width: number;
@@ -31,6 +31,7 @@ const CURSOR_MAP: Record<string, string> = {
   line:      "crosshair",
   text:      "text",
   freedraw:  "crosshair",
+  table: "crosshair",
   eraser:    "cell",
 };
 
@@ -47,6 +48,11 @@ export default function Canvas({ width, height }: Props) {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
+
+  // Table cell editing — tracked by stable IDs, not indices
+  const [editingCell, setEditingCell] = useState<{ tableId: string; rowId: string; colId: string } | null>(null);
+  const [editingCellText, setEditingCellText] = useState("");
+  const cellTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Open text editor for a shape
   const openTextEdit = useCallback(
@@ -71,12 +77,46 @@ export default function Canvas({ width, height }: Props) {
     setEditingText("");
   }, [editingId, editingText]);
 
+  const openCellEdit = useCallback((tableId: string, rowId: string, colId: string) => {
+    const shape = useCanvasStore.getState().shapes.find((s) => s.id === tableId);
+    if (!shape || shape.type !== "table") return;
+    const existing = (shape as TableShape).cells.find(
+      (c) => c.rowId === rowId && c.colId === colId
+    );
+    setEditingCell({ tableId, rowId, colId });
+    setEditingCellText(existing?.text ?? "");
+    setTimeout(() => {
+      cellTextareaRef.current?.focus();
+      cellTextareaRef.current?.select();
+    }, 20);
+  }, []);
+
+  const commitCellEdit = useCallback(() => {
+    if (!editingCell) return;
+    const { tableId, rowId, colId } = editingCell;
+    const shape = useCanvasStore.getState().shapes.find((s) => s.id === tableId);
+    if (!shape || shape.type !== "table") { setEditingCell(null); return; }
+    const t = shape as TableShape;
+    const exists = t.cells.some((c) => c.rowId === rowId && c.colId === colId);
+    const newCells = exists
+      ? t.cells.map((c) =>
+          c.rowId === rowId && c.colId === colId
+            ? { ...c, text: editingCellText }
+            : c
+        )
+      : [...t.cells, { rowId, colId, text: editingCellText }];
+    useCanvasStore.getState().updateShape(tableId, { cells: newCells } as any);
+    setEditingCell(null);
+    setEditingCellText("");
+  }, [editingCell, editingCellText]);
+
   const {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
     handleWheel,
     handleResizeStart,
+    handleTableDividerMouseDown,
     handleKeyDown,
     handleKeyUp,
   } = useCanvasEvents(svgRef, openTextEdit);
@@ -94,15 +134,21 @@ export default function Canvas({ width, height }: Props) {
     };
   }, [handleWheel, handleKeyDown, handleKeyUp]);
 
-  // Close text editor on Escape or click outside
+  // Close text editor on Escape
   useEffect(() => {
     if (!editingId) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") commitTextEdit();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") commitTextEdit(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [editingId, commitTextEdit]);
+
+  // Close cell editor on Escape
+  useEffect(() => {
+    if (!editingCell) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") commitCellEdit(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editingCell, commitCellEdit]);
 
   const sortedShapes = useMemo(
     () => [...shapes].sort((a, b) => a.zIndex - b.zIndex),
@@ -117,32 +163,43 @@ export default function Canvas({ width, height }: Props) {
     return null;
   }, [selectedIds, shapes]);
 
-  // Double-click to edit text shape
+  // Double-click to edit text shape or table cell
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       if (tool !== "select") return;
       const rect = svgRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const sp = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
+      const sp = { x: e.clientX - rect.left, y: e.clientY - rect.top };
       const cp = {
         x: (sp.x - viewport.x) / viewport.zoom,
         y: (sp.y - viewport.y) / viewport.zoom,
       };
       const sorted = [...shapes].sort((a, b) => b.zIndex - a.zIndex);
       const hit = sorted.find(
-        (s) =>
-          s.type === "text" &&
-          cp.x >= s.x &&
-          cp.x <= s.x + s.width &&
-          cp.y >= s.y &&
-          cp.y <= s.y + s.height
+        (s) => cp.x >= s.x && cp.x <= s.x + s.width && cp.y >= s.y && cp.y <= s.y + s.height
       );
-      if (hit) openTextEdit(hit.id);
+      if (!hit) return;
+      if (hit.type === "text") {
+        openTextEdit(hit.id);
+      } else if (hit.type === "table") {
+        const t = hit as TableShape;
+        // Find which row/col was clicked via cumulative offsets
+        let rowId = t.rows[t.rows.length - 1]?.id ?? "";
+        let colId = t.cols[t.cols.length - 1]?.id ?? "";
+        let ry = t.y;
+        for (const row of t.rows) {
+          if (cp.y < ry + row.height) { rowId = row.id; break; }
+          ry += row.height;
+        }
+        let rx = t.x;
+        for (const col of t.cols) {
+          if (cp.x < rx + col.width) { colId = col.id; break; }
+          rx += col.width;
+        }
+        openCellEdit(t.id, rowId, colId);
+      }
     },
-    [tool, shapes, viewport, openTextEdit]
+    [tool, shapes, viewport, openTextEdit, openCellEdit]
   );
 
   const cursor =
@@ -150,10 +207,55 @@ export default function Canvas({ width, height }: Props) {
 
   const isEmpty = shapes.length === 0 && !drawingShape;
 
-  // Compute textarea position for the editing shape
+  // Compute textarea position for text shape editing
   const editingShape = editingId
     ? (shapes.find((s) => s.id === editingId) as TextShape | undefined)
     : undefined;
+
+  // Compute cell textarea position using cumulative offsets from the new model
+  const cellTextareaStyle = useMemo((): React.CSSProperties => {
+    if (!editingCell) return { display: "none" };
+    const shape = shapes.find((s) => s.id === editingCell.tableId) as TableShape | undefined;
+    if (!shape) return { display: "none" };
+
+    const ri = shape.rows.findIndex((r) => r.id === editingCell.rowId);
+    const ci = shape.cols.findIndex((c) => c.id === editingCell.colId);
+    if (ri === -1 || ci === -1) return { display: "none" };
+
+    let colX = 0;
+    for (let i = 0; i < ci; i++) colX += shape.cols[i].width;
+    let rowY = 0;
+    for (let i = 0; i < ri; i++) rowY += shape.rows[i].height;
+
+    const cellW = shape.cols[ci].width;
+    const cellH = shape.rows[ri].height;
+    const screen = canvasToScreen(shape.x + colX, shape.y + rowY, viewport);
+    const isHeader = ri === shape.headerRow;
+    const dark =
+      typeof document !== "undefined" &&
+      document.documentElement.getAttribute("data-theme") === "dark";
+
+    return {
+      position: "absolute",
+      left:  screen.x + 2,
+      top:   screen.y + 2,
+      width:  cellW * viewport.zoom - 4,
+      height: cellH * viewport.zoom - 4,
+      fontSize: (isHeader ? 12 : 11) * viewport.zoom,
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      fontWeight: isHeader ? 600 : 400,
+      color:      dark ? "#579DFF" : "#0C66E4",
+      background: dark ? "#1C2B41" : "#E9F2FF",
+      border: "1.5px solid " + (dark ? "#579DFF" : "#0C66E4"),
+      borderRadius: 2,
+      outline: "none",
+      padding: "1px 5px",
+      resize: "none",
+      overflow: "hidden",
+      lineHeight: 1.4,
+      zIndex: 100,
+    };
+  }, [editingCell, shapes, viewport]);
 
   const textareaStyle = useMemo((): React.CSSProperties => {
     if (!editingShape) return { display: "none" };
@@ -234,13 +336,20 @@ export default function Canvas({ width, height }: Props) {
               shape={shape}
               isSelected={selectedIds.has(shape.id)}
               isEditing={editingId === shape.id}
+              editingCell={
+                editingCell?.tableId === shape.id
+                  ? { rowId: editingCell.rowId, colId: editingCell.colId }
+                  : null
+              }
+              onCellDoubleClick={(rowId, colId) =>
+                openCellEdit(shape.id, rowId, colId)
+              }
+              onDividerMouseDown={(e, type, index) =>
+                handleTableDividerMouseDown(e, shape.id, type, index)
+              }
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => {
-                // Don't stop propagation — let canvas handleMouseDown handle everything
-                // Only block when we're in text-edit mode
-                if (editingId) {
-                  e.stopPropagation();
-                }
+                if (editingId || editingCell) e.stopPropagation();
               }}
             />
           ))}
@@ -323,7 +432,7 @@ export default function Canvas({ width, height }: Props) {
               fontSize={12}
               fontFamily="var(--font-inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif)"
             >
-              Scroll to zoom · Space + drag to pan · V to select
+              Scroll to zoom · Space + drag to pan · V to select · G for table
             </text>
           </g>
         )}
@@ -337,14 +446,27 @@ export default function Canvas({ width, height }: Props) {
           onChange={(e) => setEditingText(e.target.value)}
           onBlur={commitTextEdit}
           onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              e.preventDefault();
-              commitTextEdit();
-            }
-            // Allow Enter for line breaks; Shift+Enter or just Enter in textarea works naturally
+            if (e.key === "Escape") { e.preventDefault(); commitTextEdit(); }
             e.stopPropagation();
           }}
           style={textareaStyle}
+          spellCheck={false}
+        />
+      )}
+
+      {/* Table cell editor overlay */}
+      {editingCell && (
+        <textarea
+          ref={cellTextareaRef}
+          value={editingCellText}
+          onChange={(e) => setEditingCellText(e.target.value)}
+          onBlur={commitCellEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") { e.preventDefault(); commitCellEdit(); }
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitCellEdit(); }
+            e.stopPropagation();
+          }}
+          style={cellTextareaStyle}
           spellCheck={false}
         />
       )}

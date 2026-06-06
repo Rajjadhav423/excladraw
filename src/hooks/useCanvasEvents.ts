@@ -12,10 +12,17 @@ import {
   normalizeRect,
 } from "@/lib/geometry";
 import { createShape } from "@/lib/shapeFactory";
-import { Shape, Point } from "@/types";
+import {
+  TABLE_MIN_COL_WIDTH,
+  TABLE_MIN_ROW_HEIGHT,
+  totalTableWidth,
+  totalTableHeight,
+} from "@/lib/tableUtils";
+import { Shape, Point, TableShape, TableRow, TableCol, ToolType } from "@/types";
 
 interface DragState {
-  type: "none" | "pan" | "draw" | "move" | "resize" | "select-box";
+  type: "none" | "pan" | "draw" | "move" | "resize" | "select-box"
+      | "table-col-resize" | "table-row-resize";
   startScreen: Point;
   startCanvas: Point;
   shapeId?: string;
@@ -24,6 +31,14 @@ interface DragState {
   shapesOrigin?: Map<string, { x: number; y: number }>;
   selectionBox?: { x: number; y: number; width: number; height: number };
   moved?: boolean;
+  // Whole-table proportional resize (standard handles)
+  resizeOriginalRows?: TableRow[];
+  resizeOriginalCols?: TableCol[];
+  // Table divider resize
+  tableId?: string;
+  tableDividerIndex?: number;
+  tableOriginalRows?: TableRow[];
+  tableOriginalCols?: TableCol[];
 }
 
 export function useCanvasEvents(
@@ -70,7 +85,7 @@ export function useCanvasEvents(
   );
 
   const isDrawingTool = (t: string) =>
-    ["rectangle", "ellipse", "arrow", "line", "text", "freedraw"].includes(t);
+    ["rectangle", "ellipse", "arrow", "line", "text", "freedraw", "table"].includes(t);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -109,7 +124,7 @@ export function useCanvasEvents(
       if (isDrawingTool(tool)) {
         const cp = getCanvasPoint(e);
         const maxZ = shapes.reduce((m, s) => Math.max(m, s.zIndex), 0);
-        const newShape = createShape(tool as any, cp, cp, maxZ + 1);
+        const newShape = createShape(tool as ToolType, cp, cp, maxZ + 1);
         if (!newShape) return;
         setIsDrawing(true);
         setDrawingShape(newShape);
@@ -235,6 +250,21 @@ export function useCanvasEvents(
             height,
             points: [...drawingShape.points, cp],
           } as Shape);
+        } else if (drawingShape.type === "table") {
+          // Scale all cols/rows proportionally as the user drags
+          const t = drawingShape as TableShape;
+          const colW = Math.max(width  / t.cols.length, TABLE_MIN_COL_WIDTH);
+          const rowH = Math.max(height / t.rows.length, TABLE_MIN_ROW_HEIGHT);
+          const newCols = t.cols.map((c) => ({ ...c, width:  colW }));
+          const newRows = t.rows.map((r) => ({ ...r, height: rowH }));
+          setDrawingShape({
+            ...t,
+            x, y,
+            width:  totalTableWidth(newCols),
+            height: totalTableHeight(newRows),
+            cols: newCols,
+            rows: newRows,
+          } as Shape);
         } else {
           setDrawingShape({ ...drawingShape, x, y, width, height } as Shape);
         }
@@ -256,29 +286,70 @@ export function useCanvasEvents(
 
       if (d.type === "resize" && d.resizeOrigin && d.shapeId) {
         const { x: ox, y: oy, width: ow, height: oh } = d.resizeOrigin;
-        let nx = ox,
-          ny = oy,
-          nw = ow,
-          nh = oh;
+        let nx = ox, ny = oy, nw = ow, nh = oh;
         const h = d.resizeHandle!;
 
         if (h.includes("e")) nw = cp.x - ox;
         if (h.includes("s")) nh = cp.y - oy;
-        if (h.includes("w")) {
-          nw = ox + ow - cp.x;
-          nx = cp.x;
-        }
-        if (h.includes("n")) {
-          nh = oy + oh - cp.y;
-          ny = cp.y;
-        }
+        if (h.includes("w")) { nw = ox + ow - cp.x; nx = cp.x; }
+        if (h.includes("n")) { nh = oy + oh - cp.y; ny = cp.y; }
 
-        updateShape(d.shapeId, {
-          x: nx,
-          y: ny,
-          width: Math.max(nw, 4),
-          height: Math.max(nh, 4),
-        });
+        nw = Math.max(nw, 4);
+        nh = Math.max(nh, 4);
+
+        if (d.resizeOriginalRows && d.resizeOriginalCols) {
+          // Proportionally scale table rows/cols
+          const scaleW = nw / ow;
+          const scaleH = nh / oh;
+          const newCols = d.resizeOriginalCols.map((c) => ({
+            ...c, width: Math.max(c.width * scaleW, TABLE_MIN_COL_WIDTH),
+          }));
+          const newRows = d.resizeOriginalRows.map((r) => ({
+            ...r, height: Math.max(r.height * scaleH, TABLE_MIN_ROW_HEIGHT),
+          }));
+          updateShape(d.shapeId, {
+            x: nx, y: ny,
+            width: totalTableWidth(newCols),
+            height: totalTableHeight(newRows),
+            cols: newCols,
+            rows: newRows,
+          } as Partial<Shape>);
+        } else {
+          updateShape(d.shapeId, { x: nx, y: ny, width: nw, height: nh });
+        }
+        return;
+      }
+
+      if (
+        d.type === "table-col-resize" &&
+        d.tableId !== undefined &&
+        d.tableDividerIndex !== undefined &&
+        d.tableOriginalCols
+      ) {
+        // Convert screen-space delta → canvas-space delta (account for zoom)
+        const dx = (e.clientX - d.startScreen.x) / viewport.zoom;
+        const newCols = d.tableOriginalCols.map((c, i) =>
+          i === d.tableDividerIndex
+            ? { ...c, width: Math.max(c.width + dx, TABLE_MIN_COL_WIDTH) }
+            : c
+        );
+        updateShape(d.tableId, { cols: newCols, width: totalTableWidth(newCols) } as Partial<Shape>);
+        return;
+      }
+
+      if (
+        d.type === "table-row-resize" &&
+        d.tableId !== undefined &&
+        d.tableDividerIndex !== undefined &&
+        d.tableOriginalRows
+      ) {
+        const dy = (e.clientY - d.startScreen.y) / viewport.zoom;
+        const newRows = d.tableOriginalRows.map((r, i) =>
+          i === d.tableDividerIndex
+            ? { ...r, height: Math.max(r.height + dy, TABLE_MIN_ROW_HEIGHT) }
+            : r
+        );
+        updateShape(d.tableId, { rows: newRows, height: totalTableHeight(newRows) } as Partial<Shape>);
         return;
       }
 
@@ -334,6 +405,7 @@ export function useCanvasEvents(
           if (!["freedraw", "arrow", "line"].includes(drawingShape.type)) {
             setTool("select");
           }
+          // For table, minimum size enforcement handled in shapeFactory
           // Open text editor immediately after placing text shape
           if (drawingShape.type === "text" && onTextEdit) {
             setTimeout(() => onTextEdit(drawingShape.id), 50);
@@ -345,6 +417,8 @@ export function useCanvasEvents(
           useHistoryStore.getState().undo(shapes);
         }
       } else if (d.type === "resize") {
+        push(shapes);
+      } else if (d.type === "table-col-resize" || d.type === "table-row-resize") {
         push(shapes);
       } else if (d.type === "select-box" && d.selectionBox) {
         const sb = d.selectionBox;
@@ -400,6 +474,8 @@ export function useCanvasEvents(
       e.stopPropagation();
       const cp = getCanvasPoint(e);
       push(shapes);
+      const isTable = shape.type === "table";
+      const t = isTable ? (shape as TableShape) : null;
       drag.current = {
         type: "resize",
         startScreen: { x: e.clientX, y: e.clientY },
@@ -412,9 +488,45 @@ export function useCanvasEvents(
           width: shape.width,
           height: shape.height,
         },
+        resizeOriginalRows: t ? t.rows.map((r) => ({ ...r })) : undefined,
+        resizeOriginalCols: t ? t.cols.map((c) => ({ ...c })) : undefined,
       };
     },
     [getCanvasPoint, push, shapes]
+  );
+
+  /**
+   * Called when the user presses down on a table row/col divider handle.
+   * Stores the original row/col sizes so handleMouseMove can compute
+   * deltas without re-reading the store every frame.
+   */
+  const handleTableDividerMouseDown = useCallback(
+    (
+      e: React.MouseEvent,
+      tableId: string,
+      type: "row" | "col",
+      index: number
+    ) => {
+      e.stopPropagation();
+      const table = useCanvasStore
+        .getState()
+        .shapes.find((s) => s.id === tableId) as TableShape | undefined;
+      if (!table) return;
+
+      // Push pre-resize state so Ctrl+Z restores it
+      push(useCanvasStore.getState().shapes);
+
+      drag.current = {
+        type: type === "row" ? "table-row-resize" : "table-col-resize",
+        startScreen: { x: e.clientX, y: e.clientY },
+        startCanvas: { x: 0, y: 0 },
+        tableId,
+        tableDividerIndex: index,
+        tableOriginalRows: type === "row" ? table.rows.map((r) => ({ ...r })) : undefined,
+        tableOriginalCols: type === "col" ? table.cols.map((c) => ({ ...c })) : undefined,
+      };
+    },
+    [push]
   );
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -431,6 +543,7 @@ export function useCanvasEvents(
     handleMouseUp,
     handleWheel,
     handleResizeStart,
+    handleTableDividerMouseDown,
     handleKeyDown,
     handleKeyUp,
   };

@@ -1,4 +1,11 @@
-import { Shape, ToolType, Point, StrokeStyle, FillStyle, EdgeStyle } from "@/types";
+import { Shape, ToolType, Point, StrokeStyle, FillStyle, EdgeStyle, TableShape } from "@/types";
+import {
+  buildTableData,
+  TABLE_MIN_COL_WIDTH,
+  TABLE_MIN_ROW_HEIGHT,
+  totalTableWidth,
+  totalTableHeight,
+} from "./tableUtils";
 import { generateId } from "./geometry";
 
 function getThemeDefaults() {
@@ -78,6 +85,31 @@ export function createShape(
         ...base, type: "freedraw", x, y, width, height,
         points: [start], fill: "none", fillStyle: "none" as FillStyle,
       };
+
+    case "table": {
+      const dark = document.documentElement.getAttribute("data-theme") === "dark";
+      const ROW_COUNT = 3;
+      const COL_COUNT = 3;
+      // Honour the drag size; fall back to defaults if drag was too small
+      const dragW = Math.max(width,  COL_COUNT * TABLE_MIN_COL_WIDTH);
+      const dragH = Math.max(height, ROW_COUNT * TABLE_MIN_ROW_HEIGHT);
+      const colW  = Math.max(Math.floor(dragW / COL_COUNT), TABLE_MIN_COL_WIDTH);
+      const rowH  = Math.max(Math.floor(dragH / ROW_COUNT), TABLE_MIN_ROW_HEIGHT);
+      const { rows, cols, cells } = buildTableData(ROW_COUNT, COL_COUNT, rowH, colW);
+      return {
+        ...base,
+        type: "table",
+        x, y,
+        width:  totalTableWidth(cols),
+        height: totalTableHeight(rows),
+        rows,
+        cols,
+        cells,
+        headerRow: 0,
+        fill:   dark ? "#22272B" : "#ffffff",
+        stroke: DEFAULT_STROKE,
+      } as TableShape;
+    }
 
     default:
       return null;
