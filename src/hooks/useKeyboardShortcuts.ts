@@ -3,6 +3,7 @@ import { useToolStore } from "@/stores/toolStore";
 import { useSelectionStore } from "@/stores/selectionStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useHistoryStore } from "@/stores/historyStore";
+import { copyShapes } from "@/features/clipboard";
 import { ToolType } from "@/types";
 
 export function useKeyboardShortcuts(
@@ -33,9 +34,13 @@ export function useKeyboardShortcuts(
         return;
       }
       if (ctrl && e.key === "c") {
-        // copy handled separately via clipboard store
+        if (selectedIds.size > 0) {
+          copyShapes(shapes.filter((s) => selectedIds.has(s.id)));
+          onToast(`Copied ${selectedIds.size} shape${selectedIds.size > 1 ? "s" : ""}`);
+        }
         return;
       }
+      // Ctrl+V is handled by the window "paste" event in Canvas.tsx
       if (ctrl && e.key === "v") {
         return;
       }

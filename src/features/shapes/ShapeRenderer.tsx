@@ -1,6 +1,7 @@
 "use client";
 import React, { memo } from "react";
-import { Shape, StrokeStyle, TableShape } from "@/types";
+import { Shape, StrokeStyle, TableShape, ImageShape } from "@/types";
+import { useImageAssetStore } from "@/stores/imageAssetStore";
 import TableRenderer from "./TableRenderer";
 
 interface Props {
@@ -45,6 +46,68 @@ function HatchPattern({ id, color }: { id: string; color: string }) {
 }
 
 const SEL_STROKE = "var(--selection-stroke, #2563EB)";
+
+/** Separate memo component so only the affected image re-renders when its asset loads. */
+const ImageShapeRenderer = memo(function ImageShapeRenderer({
+  shape,
+  isSelected,
+  onClick,
+  onMouseDown,
+}: {
+  shape: ImageShape;
+  isSelected: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  onMouseDown: (e: React.MouseEvent) => void;
+}) {
+  const asset = useImageAssetStore((state) => state.assets[shape.imageId]);
+  const sw = isSelected ? Math.max(shape.strokeWidth, 2) : shape.strokeWidth;
+  const w = Math.max(shape.width, 1);
+  const h = Math.max(shape.height, 1);
+
+  if (!asset) {
+    // Placeholder while asset is unavailable
+    return (
+      <g style={{ opacity: shape.opacity, cursor: "move" }} onClick={onClick} onMouseDown={onMouseDown}>
+        <rect
+          x={shape.x} y={shape.y} width={w} height={h}
+          fill="var(--ads-surface-sunken, #F7F8F9)"
+          stroke="var(--ads-border, #DCDFE4)"
+          strokeWidth={1}
+          strokeDasharray="6 3"
+        />
+        <text
+          x={shape.x + w / 2} y={shape.y + h / 2}
+          textAnchor="middle" dominantBaseline="middle"
+          fill="var(--ads-text-disabled, #8993A4)"
+          fontSize={12}
+          style={{ pointerEvents: "none", userSelect: "none" }}
+        >
+          Image
+        </text>
+      </g>
+    );
+  }
+
+  return (
+    <g style={{ opacity: shape.opacity, cursor: "move" }} onClick={onClick} onMouseDown={onMouseDown}>
+      <image
+        href={asset.dataURL}
+        x={shape.x} y={shape.y}
+        width={w} height={h}
+        preserveAspectRatio="none"
+      />
+      {isSelected && (
+        <rect
+          x={shape.x} y={shape.y} width={w} height={h}
+          fill="none"
+          stroke={SEL_STROKE}
+          strokeWidth={sw}
+          pointerEvents="none"
+        />
+      )}
+    </g>
+  );
+});
 
 const ShapeRenderer = memo(function ShapeRenderer({
   shape,
@@ -196,6 +259,17 @@ const ShapeRenderer = memo(function ShapeRenderer({
         onMouseDown={onMouseDown}
         onCellDoubleClick={onCellDoubleClick ?? (() => {})}
         onDividerMouseDown={onDividerMouseDown ?? (() => {})}
+      />
+    );
+  }
+
+  if (shape.type === "image") {
+    return (
+      <ImageShapeRenderer
+        shape={shape as ImageShape}
+        isSelected={isSelected}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
       />
     );
   }

@@ -17,7 +17,8 @@ export type ShapeType =
   | "line"
   | "text"
   | "freedraw"
-  | "table";
+  | "table"
+  | "image";
 
 export type StrokeStyle = "solid" | "dashed" | "dotted";
 export type FillStyle  = "none" | "hatch" | "solid";
@@ -116,6 +117,12 @@ export interface TableShape extends BaseShape {
   headerRow: number;
 }
 
+export interface ImageShape extends BaseShape {
+  type: "image";
+  /** References an asset in imageAssetStore */
+  imageId: string;
+}
+
 export type Shape =
   | RectangleShape
   | EllipseShape
@@ -123,7 +130,8 @@ export type Shape =
   | LineShape
   | TextShape
   | FreeDrawShape
-  | TableShape;
+  | TableShape
+  | ImageShape;
 
 export interface Viewport {
   x: number;

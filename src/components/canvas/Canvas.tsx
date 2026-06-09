@@ -9,6 +9,7 @@ import React, {
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useSelectionStore } from "@/stores/selectionStore";
 import { useViewportStore } from "@/stores/viewportStore";
+import { useHistoryStore } from "@/stores/historyStore";
 import { useToolStore } from "@/stores/toolStore";
 import { useCanvasSettingsStore } from "@/stores/canvasSettingsStore";
 import { useCanvasEvents } from "@/hooks/useCanvasEvents";
@@ -16,6 +17,9 @@ import ShapeRenderer from "@/features/shapes/ShapeRenderer";
 import SelectionHandles from "@/features/shapes/SelectionHandles";
 import { canvasToScreen } from "@/lib/geometry";
 import { TextShape, TableShape } from "@/types";
+import { handleClipboardImagePaste } from "@/features/images/clipboardImages";
+import { handleDragOver, handleDrop } from "@/features/images/dragDropImages";
+import { hasClipboard, pasteShapes } from "@/features/clipboard";
 
 interface Props {
   width: number;
@@ -133,6 +137,27 @@ export default function Canvas({ width, height }: Props) {
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [handleWheel, handleKeyDown, handleKeyUp]);
+
+  // Handle window paste: OS images (screenshots, browser copies) + shape paste
+  useEffect(() => {
+    const onPaste = async (e: ClipboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      const { viewport } = useViewportStore.getState();
+      const handledImage = await handleClipboardImagePaste(e, viewport);
+      if (!handledImage && hasClipboard()) {
+        e.preventDefault();
+        const current = useCanvasStore.getState().shapes;
+        useHistoryStore.getState().push(current);
+        const copies = pasteShapes(current);
+        copies.forEach((s) => useCanvasStore.getState().addShape(s));
+        useSelectionStore.getState().selectMany(copies.map((s) => s.id));
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, []);
 
   // Close text editor on Escape
   useEffect(() => {
@@ -291,6 +316,13 @@ export default function Canvas({ width, height }: Props) {
     <div
       ref={containerRef}
       style={{ position: "relative", width, height, overflow: "hidden" }}
+      onDragOver={handleDragOver}
+      onDrop={(e) => {
+        const rect = svgRef.current?.getBoundingClientRect();
+        if (rect) {
+          handleDrop(e, useViewportStore.getState().viewport, rect);
+        }
+      }}
     >
       <svg
         ref={svgRef}

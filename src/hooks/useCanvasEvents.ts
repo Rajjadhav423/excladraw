@@ -297,6 +297,22 @@ export function useCanvasEvents(
         nw = Math.max(nw, 4);
         nh = Math.max(nh, 4);
 
+        // Aspect-ratio lock for image shapes on corner handles (bypass with Shift)
+        const resizingShape = useCanvasStore.getState().shapes.find((s) => s.id === d.shapeId);
+        const isCorner = h.length === 2;
+        if (resizingShape?.type === "image" && isCorner && !e.shiftKey && ow > 0 && oh > 0) {
+          const ar = ow / oh;
+          if (nw / ow >= nh / oh) {
+            const lockedH = Math.max(nw / ar, 4);
+            if (h.includes("n")) ny = oy + oh - lockedH;
+            nh = lockedH;
+          } else {
+            const lockedW = Math.max(nh * ar, 4);
+            if (h.includes("w")) nx = ox + ow - lockedW;
+            nw = lockedW;
+          }
+        }
+
         if (d.resizeOriginalRows && d.resizeOriginalCols) {
           // Proportionally scale table rows/cols
           const scaleW = nw / ow;

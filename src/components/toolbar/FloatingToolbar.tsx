@@ -3,9 +3,10 @@ import React, { memo, useState, useRef, useEffect } from "react";
 import {
   MousePointer2, Hand, Square, Circle, ArrowRight,
   Minus, Pencil, Type, Eraser, Lock, MoreHorizontal,
-  Frame, Globe, Zap, Lasso, Table2,
+  Frame, Globe, Zap, Lasso, Table2, Image,
 } from "lucide-react";
 import { useToolStore } from "@/stores/toolStore";
+import { useImageUpload } from "@/features/images/useImageUpload";
 import { ToolType } from "@/types";
 
 interface ToolDef {
@@ -102,6 +103,7 @@ const FloatingToolbar = memo(function FloatingToolbar() {
   const { tool, setTool } = useToolStore();
   const [extraOpen, setExtraOpen] = useState(false);
   const extraRef = useRef<HTMLDivElement>(null);
+  const { triggerUpload, handleInputChange, inputRef } = useImageUpload();
 
   useEffect(() => {
     if (!extraOpen) return;
@@ -160,6 +162,54 @@ const FloatingToolbar = memo(function FloatingToolbar() {
             ))}
           </React.Fragment>
         ))}
+
+        <Sep />
+
+        {/* Image upload button */}
+        <button
+          title="Insert image  ·  drag & drop or Ctrl+V"
+          onClick={triggerUpload}
+          style={{
+            width: 36, height: 34,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexDirection: "column", gap: 0,
+            borderRadius: "var(--ads-radius-sm)",
+            border: "1.5px solid transparent",
+            cursor: "pointer",
+            background: "transparent",
+            color: "var(--ads-icon-subtle)",
+            transition: "background var(--ads-transition-fast), color var(--ads-transition-fast)",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--ads-surface-hovered)";
+            e.currentTarget.style.color = "var(--ads-icon-default)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "var(--ads-icon-subtle)";
+          }}
+        >
+          <Image size={15} strokeWidth={1.8} />
+          <span style={{
+            fontSize: 8, fontWeight: 700, lineHeight: 1, letterSpacing: "0.04em",
+            color: "var(--ads-text-disabled)",
+            marginTop: 1,
+          }}>
+            IMG
+          </span>
+        </button>
+
+        {/* Hidden file input for image upload */}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+          multiple
+          onChange={handleInputChange}
+          style={{ display: "none" }}
+          aria-hidden="true"
+        />
 
         <Sep />
 
