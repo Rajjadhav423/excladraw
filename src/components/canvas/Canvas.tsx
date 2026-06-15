@@ -294,6 +294,7 @@ export default function Canvas({ width, height }: Props) {
     >
       <svg
         ref={svgRef}
+        data-boardflow-canvas="true"
         width={width}
         height={height}
         style={{
