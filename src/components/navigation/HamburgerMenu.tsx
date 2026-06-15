@@ -7,7 +7,9 @@ import { useCanvasStore } from "@/stores/canvasStore";
 import { useSelectionStore } from "@/stores/selectionStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { useCanvasSettingsStore } from "@/stores/canvasSettingsStore";
+import { useToast } from "@/components/ui/Toast";
 import { Button, MenuItem, Separator, Label, ColorPicker, Toggle } from "@/components/ui";
+import { exportToPdf } from "@/lib/exportToPdf";
 
 /* ── Canvas background presets ───────────────────────────────────────────── */
 const BG_PRESETS: { label: string; color: string }[] = [
@@ -33,6 +35,7 @@ export default memo(function HamburgerMenu() {
   const gridColorPickerTriggerRef = useRef<HTMLButtonElement>(null);
   const [bgPickerOpen, setBgPickerOpen] = useState(false);
   const [gridColorPickerOpen, setGridColorPickerOpen] = useState(false);
+  const { showToast } = useToast();
 
   // Keep mutable refs so the mousedown handler (closed over on mount) always
   // sees the latest picker state without needing to be re-registered.
@@ -79,6 +82,24 @@ export default memo(function HamburgerMenu() {
     useSelectionStore.getState().clearSelection();
     setOpen(false);
   };
+
+  const handleExportPdf = async () => {
+    try {
+      // Get the SVG element from the DOM
+      const svg = document.querySelector("svg");
+      if (!svg) {
+        showToast("Could not find canvas to export");
+        return;
+      }
+      await exportToPdf(svg, "BoardFlow-drawing");
+      showToast("Your drawing has been exported as PDF");
+      setOpen(false);
+    } catch (error) {
+      console.error("Export error:", error);
+      showToast(error instanceof Error ? error.message : "Failed to export PDF");
+    }
+  };
+
 
   return (
     <>
@@ -193,7 +214,12 @@ export default memo(function HamburgerMenu() {
           <div style={{ padding: "var(--ads-sp-075) var(--ads-sp-075)" }}>
             <MenuItem icon={<FolderOpen size={14} strokeWidth={1.8} />} label="Open…"                shortcut="Ctrl+O" />
             <MenuItem icon={<Save size={14} strokeWidth={1.8} />}       label="Save to…" />
-            <MenuItem icon={<Download size={14} strokeWidth={1.8} />}   label="Export image…"        shortcut="Ctrl+Shift+E" />
+            <MenuItem
+              icon={<Download size={14} strokeWidth={1.8} />}
+              label="Export as PDF…"
+              shortcut="Ctrl+Shift+E"
+              onClick={handleExportPdf}
+            />
             <MenuItem icon={<Users size={14} strokeWidth={1.8} />}      label="Live collaboration…" />
           </div>
 
