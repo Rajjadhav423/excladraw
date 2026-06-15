@@ -8,6 +8,7 @@ import { useSelectionStore } from "@/stores/selectionStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { useCanvasSettingsStore } from "@/stores/canvasSettingsStore";
 import { Button, MenuItem, Separator, Label, ColorPicker, Toggle } from "@/components/ui";
+import { exportCanvasAsPdf } from "@/lib/exportPdf";
 
 /* ── Canvas background presets ───────────────────────────────────────────── */
 const BG_PRESETS: { label: string; color: string }[] = [
@@ -78,6 +79,13 @@ export default memo(function HamburgerMenu() {
     useCanvasStore.getState().setShapes([]);
     useSelectionStore.getState().clearSelection();
     setOpen(false);
+  };
+
+  const handleExportPdf = () => {
+    setOpen(false);
+    void exportCanvasAsPdf().catch((error) => {
+      console.error("Failed to export PDF", error);
+    });
   };
 
   return (
@@ -194,6 +202,7 @@ export default memo(function HamburgerMenu() {
             <MenuItem icon={<FolderOpen size={14} strokeWidth={1.8} />} label="Open…"                shortcut="Ctrl+O" />
             <MenuItem icon={<Save size={14} strokeWidth={1.8} />}       label="Save to…" />
             <MenuItem icon={<Download size={14} strokeWidth={1.8} />}   label="Export image…"        shortcut="Ctrl+Shift+E" />
+            <MenuItem icon={<Download size={14} strokeWidth={1.8} />}   label="Export as PDF…"       shortcut="Ctrl+Shift+P" onClick={handleExportPdf} />
             <MenuItem icon={<Users size={14} strokeWidth={1.8} />}      label="Live collaboration…" />
           </div>
 
