@@ -38,7 +38,7 @@ export default function BoardPage() {
           top: 12,
           left: 12,
         }}>
-          <HamburgerMenu />
+          <HamburgerMenu onNotify={showToast} />
         </div>
 
         {/* Top-center: drawing toolbar */}

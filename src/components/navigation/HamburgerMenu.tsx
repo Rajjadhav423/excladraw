@@ -8,6 +8,7 @@ import { useSelectionStore } from "@/stores/selectionStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { useCanvasSettingsStore } from "@/stores/canvasSettingsStore";
 import { Button, MenuItem, Separator, Label, ColorPicker, Toggle } from "@/components/ui";
+import { CANVAS_SVG_ID, exportCanvasSvgAsPdf } from "@/lib/exportPdf";
 
 /* ── Canvas background presets ───────────────────────────────────────────── */
 const BG_PRESETS: { label: string; color: string }[] = [
@@ -22,7 +23,11 @@ const BG_PRESETS: { label: string; color: string }[] = [
   { label: "Green Tint", color: "#e8f5ee"  },
 ];
 
-export default memo(function HamburgerMenu() {
+interface HamburgerMenuProps {
+  onNotify?: (message: string) => void;
+}
+
+export default memo(function HamburgerMenu({ onNotify }: HamburgerMenuProps) {
   const [open, setOpen] = useState(false);
   const { theme, setTheme } = useThemeStore();
   useTheme();
@@ -78,6 +83,22 @@ export default memo(function HamburgerMenu() {
     useCanvasStore.getState().setShapes([]);
     useSelectionStore.getState().clearSelection();
     setOpen(false);
+  };
+
+  const exportPdf = async () => {
+    const svg = document.getElementById(CANVAS_SVG_ID);
+    if (!(svg instanceof SVGSVGElement)) {
+      onNotify?.("Canvas not found for PDF export");
+      return;
+    }
+
+    try {
+      await exportCanvasSvgAsPdf(svg);
+      onNotify?.("PDF exported");
+      setOpen(false);
+    } catch {
+      onNotify?.("PDF export failed");
+    }
   };
 
   return (
@@ -194,6 +215,7 @@ export default memo(function HamburgerMenu() {
             <MenuItem icon={<FolderOpen size={14} strokeWidth={1.8} />} label="Open…"                shortcut="Ctrl+O" />
             <MenuItem icon={<Save size={14} strokeWidth={1.8} />}       label="Save to…" />
             <MenuItem icon={<Download size={14} strokeWidth={1.8} />}   label="Export image…"        shortcut="Ctrl+Shift+E" />
+            <MenuItem icon={<Download size={14} strokeWidth={1.8} />}   label="Export as PDF…"       onClick={exportPdf} />
             <MenuItem icon={<Users size={14} strokeWidth={1.8} />}      label="Live collaboration…" />
           </div>
 
