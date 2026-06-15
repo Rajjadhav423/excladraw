@@ -15,6 +15,7 @@ import { useCanvasEvents } from "@/hooks/useCanvasEvents";
 import ShapeRenderer from "@/features/shapes/ShapeRenderer";
 import SelectionHandles from "@/features/shapes/SelectionHandles";
 import { canvasToScreen } from "@/lib/geometry";
+import { CANVAS_SVG_ID } from "@/lib/exportPdf";
 import { TextShape, TableShape } from "@/types";
 
 interface Props {
@@ -293,6 +294,7 @@ export default function Canvas({ width, height }: Props) {
       style={{ position: "relative", width, height, overflow: "hidden" }}
     >
       <svg
+        id={CANVAS_SVG_ID}
         ref={svgRef}
         width={width}
         height={height}
